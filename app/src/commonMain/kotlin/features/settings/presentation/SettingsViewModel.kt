@@ -37,6 +37,9 @@ class SettingsViewModel(
             is SettingsIntent.UpdateAuthToken -> _uiState.update { it.copy(authToken = intent.token) }
             SettingsIntent.TestPing -> testPing()
             is SettingsIntent.SelectDefaultAgent -> _uiState.update { it.copy(defaultAgent = intent.agent) }
+            is SettingsIntent.ToggleAutoReconnect -> _uiState.update { it.copy(autoReconnect = intent.enabled) }
+            is SettingsIntent.ToggleNotifyConnectionChange -> _uiState.update { it.copy(notifyConnectionChange = intent.enabled) }
+            is SettingsIntent.ToggleNotifyAgentApproval -> _uiState.update { it.copy(notifyAgentApproval = intent.enabled) }
             SettingsIntent.CheckUpdate -> checkUpdate()
             SettingsIntent.DownloadAndInstallUpdate -> downloadAndInstallUpdate()
             SettingsIntent.DismissMessage -> _uiState.update { it.copy(message = null) }

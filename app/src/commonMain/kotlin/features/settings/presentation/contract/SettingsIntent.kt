@@ -7,6 +7,9 @@ sealed interface SettingsIntent {
     data class UpdateAuthToken(val token: String) : SettingsIntent
     data object TestPing : SettingsIntent
     data class SelectDefaultAgent(val agent: AgentType) : SettingsIntent
+    data class ToggleAutoReconnect(val enabled: Boolean) : SettingsIntent
+    data class ToggleNotifyConnectionChange(val enabled: Boolean) : SettingsIntent
+    data class ToggleNotifyAgentApproval(val enabled: Boolean) : SettingsIntent
     data object CheckUpdate : SettingsIntent
     data object DownloadAndInstallUpdate : SettingsIntent
     data object DismissMessage : SettingsIntent

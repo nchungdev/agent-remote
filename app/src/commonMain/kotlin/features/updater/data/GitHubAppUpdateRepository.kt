@@ -23,8 +23,8 @@ class GitHubAppUpdateRepository(
     private val installer: PlatformApkInstaller = PlatformApkInstaller()
 ) : AppUpdateRepository {
 
-    override val currentVersionName: String = "0.1.2"
-    override val currentVersionCode: Int = 3
+    override val currentVersionName: String = "0.1.3"
+    override val currentVersionCode: Int = 4
 
     override suspend fun checkUpdate(
         repoOwner: String,
