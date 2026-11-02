@@ -1,0 +1,39 @@
+# Security & Secret Hygiene (managed by project-pro)
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+service-account*.json
+
+# Gradle & Android Build Outputs
+.gradle/
+build/
+**/build/
+local.properties
+.idea/
+*.iml
+
+# Python / Gateway cache
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+dist/
+*.spec
+*.tar.gz
+*.zip
+
+.kotlin/
+
+# Go build artifacts
+server/server
+server/dist/
+*.exe
+

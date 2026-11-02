@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "1.2.0",
+  "generator": "project-pro",
+  "updatedAt": "2026-10-31T11:27:36Z",
+  "projectName": "agent-remote",
+  "stack": "kmp",
+  "stackLabel": "Kotlin Multiplatform / Compose Multiplatform (KMP / CMP)",
+  "architecture": "clean",
+  "pattern": "mvi",
+  "referenceRepo": "chrisbanes/tivi",
+  "referenceRepoUrl": "https://github.com/chrisbanes/tivi",
+  "fileLineLimits": {
+    "warn": 300,
+    "fail": 450
+  },
+  "selectedFeatures": [
+    "solid-dry",
+    "typed-errors",
+    "di-core",
+    "network-storage",
+    "ui-nav",
+    "arch-lint",
+    "testing-ci"
+  ],
+  "selectedAgentTargets": [
+    "adr-docs",
+    "agent-runtime-hooks",
+    "agents-root",
+    "claude-gemini",
+    "cursor-ide",
+    "git-security-hooks"
+  ],
+  "commands": {
+    "build": "./app/gradlew -p app assembleDebug",
+    "test_all": "./app/gradlew -p app allTests",
+    "test_single": "./app/gradlew -p app desktopTest --tests '*<ClassName>*'",
+    "lint": "./app/gradlew -p app ktlintCheck detekt",
+    "sec_audit": "./app/gradlew -p app check"
+  }
+}

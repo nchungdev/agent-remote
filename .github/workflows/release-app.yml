@@ -1,0 +1,65 @@
+name: Release Android App
+
+on:
+  push:
+    tags:
+      - 'app-v*'
+      - 'app/*'
+  workflow_dispatch:
+    inputs:
+      version_tag:
+        description: 'App version tag (e.g. app-v0.1.0)'
+        required: true
+        default: 'app-v0.1.0'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-publish-app:
+    name: Build & Publish Android Release APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle Cache
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make Gradlew Executable
+        run: chmod +x app/gradlew
+
+      - name: Assemble Android Release APK
+        run: ./app/gradlew -p app assembleRelease
+
+      - name: Determine Version Tag & Prepare Asset
+        id: version_step
+        run: |
+          TAG="${{ github.ref_name }}"
+          if [ -z "$TAG" ] || [ "$TAG" = "main" ]; then
+            TAG="${{ github.event.inputs.version_tag || 'app-v0.1.0' }}"
+          fi
+          CLEAN_VER=$(echo "$TAG" | sed 's/^app[-/]//')
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "clean_version=$CLEAN_VER" >> $GITHUB_OUTPUT
+          mkdir -p release-assets
+          cp app/build/outputs/apk/release/agent-remote-app-release.apk "release-assets/agent-remote-android-${CLEAN_VER}.apk"
+
+      - name: Publish GitHub Release (App Only)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version_step.outputs.tag }}
+          name: App Release ${{ steps.version_step.outputs.clean_version }}
+          files: release-assets/*.apk
+          generate_release_notes: true
+          body: |
+            ### 📱 Agent Remote Android App ${{ steps.version_step.outputs.clean_version }}
+
+            #### Cài đặt
+            - Tải file `.apk` đính kèm bên dưới và mở trên điện thoại Android để cài đặt hoặc cập nhật.

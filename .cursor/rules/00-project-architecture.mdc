@@ -1,0 +1,9 @@
+---
+description: Core architecture (clean + mvi), 6-Gate Execution Harness & Security rules for agent-remote
+globs:
+alwaysApply: true
+---
+
+Strictly follow `AGENTS.md`, `.agents/rules/execution-harness.md`, and `.agents/rules/security-gate.md`.
+- **Stack**: Kotlin Multiplatform / Compose Multiplatform (KMP / CMP) | **Arch**: `clean` | **Pattern**: `mvi` | **Ref**: `chrisbanes/tivi`
+- **Hard File Cap**: Warn > 300 LOC, Fail > 450 LOC. Zero hardcoded secrets.

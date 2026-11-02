@@ -1,0 +1,10 @@
+services:
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: agent-remote-server:latest
+    container_name: agent-remote-server
+    restart: unless-stopped
+    ports:
+      - "8765:8765"

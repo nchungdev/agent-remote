@@ -1,0 +1,180 @@
+name: Release Server Gateway
+
+on:
+  push:
+    tags:
+      - 'server-v*'
+      - 'server/*'
+  workflow_dispatch:
+    inputs:
+      version_tag:
+        description: 'Server version tag (e.g. server-v0.2.0)'
+        required: true
+        default: 'server-v0.2.0'
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # 1. Build Standalone Binaries (Go Native)
+  # ---------------------------------------------------------------------------
+  build-server-binaries:
+    name: Build Server (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            artifact_name: agent-remote-server-macos-arm64.tar.gz
+            binary_name: agent-remote-server
+            archive_type: tar
+          - os: ubuntu-latest
+            artifact_name: agent-remote-server-linux-x64.tar.gz
+            binary_name: agent-remote-server
+            archive_type: tar
+          - os: windows-latest
+            artifact_name: agent-remote-server-windows-x64.zip
+            binary_name: agent-remote-server.exe
+            archive_type: zip
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache-dependency-path: server/go.sum
+
+      - name: Build Native Binary (Go)
+        working-directory: server
+        shell: bash
+        run: |
+          mkdir -p ../dist
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            go build -ldflags="-s -w" -o ../dist/agent-remote-server.exe ./cmd/server
+          else
+            go build -ldflags="-s -w" -o ../dist/agent-remote-server ./cmd/server
+          fi
+
+      - name: Package macOS DMG
+        if: matrix.os == 'macos-latest'
+        run: |
+          chmod +x server/package_dmg.sh
+          ./server/package_dmg.sh
+          mkdir -p release-binaries
+          cp dist/AgentRemoteServer.dmg release-binaries/agent-remote-server-macos-arm64.dmg
+
+      - name: Package Binary (Unix tar.gz)
+        if: matrix.archive_type == 'tar'
+        run: |
+          mkdir -p release-binaries
+          tar -czvf "release-binaries/${{ matrix.artifact_name }}" -C dist "${{ matrix.binary_name }}"
+
+      - name: Package Binary (Windows zip)
+        if: matrix.archive_type == 'zip'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path release-binaries
+          Compress-Archive -Path "dist/${{ matrix.binary_name }}" -DestinationPath "release-binaries/${{ matrix.artifact_name }}"
+
+      - name: Upload Binary Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-${{ matrix.os }}
+          path: release-binaries/*
+
+  # ---------------------------------------------------------------------------
+  # 2. Build & Push Multi-Arch Docker Image (Go Scratch/Alpine)
+  # ---------------------------------------------------------------------------
+  build-docker-image:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker Metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}-server
+          tags: |
+            type=ref,event=tag
+            type=raw,value=latest,enable=true
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./server
+          file: ./server/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  # ---------------------------------------------------------------------------
+  # 3. Publish GitHub Release (Server Only)
+  # ---------------------------------------------------------------------------
+  publish-server-release:
+    name: Publish Server Release
+    needs: [build-server-binaries, build-docker-image]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Download Server Binaries
+        uses: actions/download-artifact@v4
+        with:
+          path: all-server-assets
+          merge-multiple: true
+
+      - name: Determine Version Tag
+        id: version_step
+        run: |
+          TAG="${{ github.ref_name }}"
+          if [ -z "$TAG" ] || [ "$TAG" = "main" ]; then
+            TAG="${{ github.event.inputs.version_tag || 'server-v0.2.0' }}"
+          fi
+          CLEAN_VER=$(echo "$TAG" | sed 's/^server[-/]//')
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "clean_version=$CLEAN_VER" >> $GITHUB_OUTPUT
+
+      - name: Publish GitHub Release (Server Only)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version_step.outputs.tag }}
+          name: Server Release ${{ steps.version_step.outputs.clean_version }}
+          files: all-server-assets/*
+          generate_release_notes: true
+          body: |
+            ### 🖥️ Agent Remote Gateway Server (Go Native) ${{ steps.version_step.outputs.clean_version }}
+
+            #### 📦 Standalone Packages (True Native Binary, Zero Dependencies)
+            - **macOS Installer (.dmg):** `agent-remote-server-macos-arm64.dmg` (Kéo thả vào `/Applications`)
+            - **macOS CLI (.tar.gz):** `agent-remote-server-macos-arm64.tar.gz`
+            - **Linux (x64):** `agent-remote-server-linux-x64.tar.gz`
+            - **Windows (x64):** `agent-remote-server-windows-x64.zip`
+
+            #### 🐳 Docker Container (Alpine Multi-Arch < 15MB)
+            ```bash
+            docker pull ghcr.io/${{ github.repository }}-server:${{ steps.version_step.outputs.tag }}
+            docker run -d -p 8765:8765 ghcr.io/${{ github.repository }}-server:${{ steps.version_step.outputs.tag }}
+            ```

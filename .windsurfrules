@@ -1,0 +1,4 @@
+# agent-remote — AI Coding & Security Rules
+
+Strictly follow `AGENTS.md`, `.agents/rules/execution-harness.md`, and `.agents/rules/security-gate.md`.
+Architecture: `clean` | Pattern: `mvi` | Reference Repo: `chrisbanes/tivi` | Max File Lines: `450`.
