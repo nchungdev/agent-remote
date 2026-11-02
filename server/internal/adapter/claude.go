@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"sync"
@@ -18,6 +19,7 @@ type ClaudeCodeAdapter struct {
 	workspacePath string
 	ctx           context.Context
 	cancelFunc    context.CancelFunc
+	stdinPipe     io.WriteCloser
 }
 
 func NewClaudeCodeAdapter(workspacePath string) *ClaudeCodeAdapter {
@@ -50,6 +52,9 @@ func (c *ClaudeCodeAdapter) HandlePrompt(opts PromptOptions, emit Emitter) {
 		emit(protocol.ErrorEvent("Không tìm thấy lệnh 'claude' CLI trên máy Mac. Cài đặt: npm i -g @anthropic-ai/claude-code"))
 		return
 	}
+	if c.cancelFunc != nil {
+		c.cancelFunc()
+	}
 	c.ctx, c.cancelFunc = context.WithCancel(context.Background())
 	ctx := c.ctx
 	claudePath := c.claudeBin
@@ -74,6 +79,11 @@ func (c *ClaudeCodeAdapter) HandlePrompt(opts PromptOptions, emit Emitter) {
 	cmd := exec.CommandContext(ctx, claudePath, args...)
 	cmd.Dir = workDir
 
+	stdin, _ := cmd.StdinPipe()
+	c.mu.Lock()
+	c.stdinPipe = stdin
+	c.mu.Unlock()
+
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		emit(protocol.ErrorEvent(fmt.Sprintf("Không thể mở stdout pipe: %v", err)))
@@ -97,7 +107,25 @@ func (c *ClaudeCodeAdapter) HandlePrompt(opts PromptOptions, emit Emitter) {
 	emit(protocol.MessageEnd(msgID))
 }
 
-func (c *ClaudeCodeAdapter) HandleApproval(callID string, approved bool) {}
+func (c *ClaudeCodeAdapter) HandleApproval(callID string, approved bool) {
+	c.mu.Lock()
+	pipe := c.stdinPipe
+	cancel := c.cancelFunc
+	c.mu.Unlock()
+
+	if !approved {
+		if pipe != nil {
+			_, _ = pipe.Write([]byte("n\n"))
+		}
+		if cancel != nil {
+			cancel()
+		}
+		return
+	}
+	if pipe != nil {
+		_, _ = pipe.Write([]byte("y\n"))
+	}
+}
 
 func (c *ClaudeCodeAdapter) Cancel() {
 	c.mu.Lock()

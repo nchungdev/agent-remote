@@ -23,7 +23,7 @@ func getLocalLANIP() string {
 func (s *Server) GetQRPayload() string {
 	lanIP := getLocalLANIP()
 	lanAddr := fmt.Sprintf("%s:%d", lanIP, s.GetPort())
-	payload, err := pairing.BuildPairingJSON("agent-remote", s.GetTunnelURL(), "", s.GetRoomCode(), lanAddr)
+	payload, err := pairing.BuildPairingJSON("agent-remote", s.GetTunnelURL(), s.GetToken(), s.GetRoomCode(), lanAddr)
 	if err != nil {
 		return fmt.Sprintf(`{"v":1,"app":"agent-remote","room":"%s","lan":"%s"}`, s.GetRoomCode(), lanAddr)
 	}

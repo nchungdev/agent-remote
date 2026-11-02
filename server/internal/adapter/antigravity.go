@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -20,6 +21,7 @@ type AntigravityAdapter struct {
 	binaryPath string
 	ctx        context.Context
 	cancelFunc context.CancelFunc
+	stdinPipe  io.WriteCloser
 }
 
 func NewAntigravityAdapter() *AntigravityAdapter {
@@ -90,6 +92,9 @@ func (a *AntigravityAdapter) HandlePrompt(opts PromptOptions, emit Emitter) {
 		return
 	}
 
+	if a.cancelFunc != nil {
+		a.cancelFunc()
+	}
 	a.ctx, a.cancelFunc = context.WithCancel(context.Background())
 	ctx := a.ctx
 	a.mu.Unlock()
@@ -110,6 +115,11 @@ func (a *AntigravityAdapter) HandlePrompt(opts PromptOptions, emit Emitter) {
 	if opts.Workspace != "" {
 		cmd.Dir = opts.Workspace
 	}
+
+	stdin, _ := cmd.StdinPipe()
+	a.mu.Lock()
+	a.stdinPipe = stdin
+	a.mu.Unlock()
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -203,7 +213,25 @@ func (a *AntigravityAdapter) HandlePrompt(opts PromptOptions, emit Emitter) {
 	emit(protocol.MessageEnd(activeConvID + "_" + msgID))
 }
 
-func (a *AntigravityAdapter) HandleApproval(callID string, approved bool) {}
+func (a *AntigravityAdapter) HandleApproval(callID string, approved bool) {
+	a.mu.Lock()
+	pipe := a.stdinPipe
+	cancel := a.cancelFunc
+	a.mu.Unlock()
+
+	if !approved {
+		if pipe != nil {
+			_, _ = pipe.Write([]byte("n\n"))
+		}
+		if cancel != nil {
+			cancel()
+		}
+		return
+	}
+	if pipe != nil {
+		_, _ = pipe.Write([]byte("y\n"))
+	}
+}
 
 func (a *AntigravityAdapter) Cancel() {
 	a.mu.Lock()

@@ -4,11 +4,19 @@ import android.content.Intent
 import androidx.core.content.FileProvider
 import app.duinch.agentremote.core.presentation.util.AppContextProvider
 import java.io.File
+import java.security.MessageDigest
 
 actual class PlatformApkInstaller {
-    actual fun saveApkBytes(bytes: ByteArray): String {
+    actual fun saveApkBytes(bytes: ByteArray, expectedSha256: String): String {
         val ctx = AppContextProvider.context ?: return ""
         return try {
+            if (expectedSha256.isNotBlank()) {
+                val digest = MessageDigest.getInstance("SHA-256").digest(bytes)
+                val actualHex = digest.joinToString("") { "%02x".format(it) }
+                if (!actualHex.equals(expectedSha256.trim(), ignoreCase = true)) {
+                    return ""
+                }
+            }
             val file = File(ctx.cacheDir, "agent-remote-update.apk")
             file.writeBytes(bytes)
             file.absolutePath

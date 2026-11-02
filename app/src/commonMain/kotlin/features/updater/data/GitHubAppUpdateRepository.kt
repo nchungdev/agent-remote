@@ -25,6 +25,7 @@ class GitHubAppUpdateRepository(
 
     override val currentVersionName: String = "0.1.4"
     override val currentVersionCode: Int = 5
+    private var expectedSha256: String = ""
 
     override suspend fun checkUpdate(
         repoOwner: String,
@@ -59,11 +60,14 @@ class GitHubAppUpdateRepository(
             val cleanTagName = dto.tagName.replace(Regex("^[^0-9]+"), "")
             val isNewer = compareVersions(cleanTagName, currentVersionName) > 0
 
+            val releaseNotes = dto.body.orEmpty()
+            expectedSha256 = Regex("\\b[a-fA-F0-9]{64}\\b").find(releaseNotes)?.value?.lowercase().orEmpty()
+
             val release = AppRelease(
                 tagName = dto.tagName,
                 versionName = cleanTagName,
                 versionCode = parseVersionCode(cleanTagName),
-                releaseNotes = dto.body.orEmpty(),
+                releaseNotes = releaseNotes,
                 downloadUrl = apkAsset?.browserDownloadUrl,
                 publishedAt = dto.publishedAt.orEmpty(),
                 isNewerThanCurrent = isNewer
@@ -90,9 +94,9 @@ class GitHubAppUpdateRepository(
             }
 
             val bytes = response.bodyAsChannel().readRemaining().readByteArray()
-            val savedPath = installer.saveApkBytes(bytes)
+            val savedPath = installer.saveApkBytes(bytes, expectedSha256)
             if (savedPath.isBlank()) {
-                return AppResult.Failure(DomainError.Network("Không thể lưu tệp APK vào bộ nhớ đệm"))
+                return AppResult.Failure(DomainError.Network("Không thể lưu tệp APK hoặc sai mã kiểm tra SHA-256"))
             }
             AppResult.Success(savedPath)
         } catch (e: Exception) {

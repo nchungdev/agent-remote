@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -19,6 +20,7 @@ type CodexAdapter struct {
 	binaryPath string
 	ctx        context.Context
 	cancelFunc context.CancelFunc
+	stdinPipe  io.WriteCloser
 }
 
 func NewCodexAdapter() *CodexAdapter {
@@ -74,6 +76,9 @@ func (c *CodexAdapter) HandlePrompt(opts PromptOptions, emit Emitter) {
 		return
 	}
 
+	if c.cancelFunc != nil {
+		c.cancelFunc()
+	}
 	c.ctx, c.cancelFunc = context.WithCancel(context.Background())
 	ctx := c.ctx
 	c.mu.Unlock()
@@ -93,6 +98,11 @@ func (c *CodexAdapter) HandlePrompt(opts PromptOptions, emit Emitter) {
 	if opts.Workspace != "" {
 		cmd.Dir = opts.Workspace
 	}
+
+	stdin, _ := cmd.StdinPipe()
+	c.mu.Lock()
+	c.stdinPipe = stdin
+	c.mu.Unlock()
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -139,7 +149,25 @@ func (c *CodexAdapter) HandlePrompt(opts PromptOptions, emit Emitter) {
 	emit(protocol.MessageEnd(msgID))
 }
 
-func (c *CodexAdapter) HandleApproval(callID string, approved bool) {}
+func (c *CodexAdapter) HandleApproval(callID string, approved bool) {
+	c.mu.Lock()
+	pipe := c.stdinPipe
+	cancel := c.cancelFunc
+	c.mu.Unlock()
+
+	if !approved {
+		if pipe != nil {
+			_, _ = pipe.Write([]byte("n\n"))
+		}
+		if cancel != nil {
+			cancel()
+		}
+		return
+	}
+	if pipe != nil {
+		_, _ = pipe.Write([]byte("y\n"))
+	}
+}
 
 func (c *CodexAdapter) Cancel() {
 	c.mu.Lock()

@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"app.duinch.agentremote/server/internal/catalog"
+	"github.com/nchungdev/remote-tunnel/go/pairing"
 )
 
 type ClientInfo struct {
@@ -144,6 +145,10 @@ func (s *Server) HandleAPITunnelStart(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+	if !pairing.IsAuthorizedRequest(r, s.GetToken()) {
+		http.Error(w, "Forbidden: host authorization required", http.StatusForbidden)
+		return
+	}
 	ctx, cancel := context.WithTimeout(r.Context(), 25*time.Second)
 	defer cancel()
 
@@ -171,6 +176,10 @@ func (s *Server) HandleAPITunnelStart(w http.ResponseWriter, r *http.Request) {
 func (s *Server) HandleAPITunnelStop(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if !pairing.IsAuthorizedRequest(r, s.GetToken()) {
+		http.Error(w, "Forbidden: host authorization required", http.StatusForbidden)
 		return
 	}
 	_ = s.quickTunnel.Stop()
@@ -264,6 +273,10 @@ func (s *Server) HandleAPIRoomRotate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+	if !pairing.IsAuthorizedRequest(r, s.GetToken()) {
+		http.Error(w, "Forbidden: host authorization required", http.StatusForbidden)
+		return
+	}
 	b := make([]byte, 3)
 	_, _ = rand.Read(b)
 	num := (int(b[0])<<16|int(b[1])<<8|int(b[2]))%900000 + 100000
@@ -271,6 +284,9 @@ func (s *Server) HandleAPIRoomRotate(w http.ResponseWriter, r *http.Request) {
 
 	s.serverMu.Lock()
 	s.roomCode = newCode
+	if s.webrtcHub != nil {
+		s.webrtcHub.UpdateRoomCode(newCode)
+	}
 	s.serverMu.Unlock()
 
 	home, err := os.UserHomeDir()
@@ -334,6 +350,10 @@ func (s *Server) HandlePairPending(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) HandlePairConfirm(w http.ResponseWriter, r *http.Request) {
+	if !pairing.IsLoopbackRequest(r) {
+		http.Error(w, "Forbidden: pairing confirmation must originate on host machine", http.StatusForbidden)
+		return
+	}
 	var req struct {
 		DeviceID string `json:"device_id"`
 		Approved bool   `json:"approved"`
@@ -378,6 +398,10 @@ func (s *Server) HandleRemotePendingRequests(w http.ResponseWriter, r *http.Requ
 }
 
 func (s *Server) HandleRemoteApproveRequest(w http.ResponseWriter, r *http.Request) {
+	if !pairing.IsLoopbackRequest(r) {
+		http.Error(w, "Forbidden: remote tunnel approval must originate on host machine", http.StatusForbidden)
+		return
+	}
 	var req struct {
 		DeviceID string `json:"device_id"`
 		Approved bool   `json:"approved"`

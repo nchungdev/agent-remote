@@ -53,6 +53,25 @@ func (h *Hub) GetRoomCode() string {
 	return h.roomCode
 }
 
+func (h *Hub) UpdateRoomCode(newRoom string) {
+	h.mu.Lock()
+	oldRoom := h.roomCode
+	h.roomCode = newRoom
+	sigHub := h.sigHub
+	h.mu.Unlock()
+
+	if sigHub != nil && oldRoom != newRoom {
+		sigHub.Unregister(oldRoom, "host")
+		if ch, err := sigHub.Register(newRoom, "host"); err == nil {
+			go func() {
+				for msg := range ch {
+					h.handleSignal(msg)
+				}
+			}()
+		}
+	}
+}
+
 func (h *Hub) IsConnected() bool {
 	h.mu.Lock()
 	defer h.mu.Unlock()

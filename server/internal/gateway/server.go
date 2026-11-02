@@ -27,7 +27,7 @@ import (
 
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
-		return true // Allow connections from mobile clients across LAN
+		return pairing.IsSafeWebSocketOrigin(r)
 	},
 }
 
@@ -184,19 +184,10 @@ func (s *Server) setAdapter(agentType protocol.AgentType) error {
 
 func (s *Server) HandleWS(w http.ResponseWriter, r *http.Request) {
 	// 1. Verify token if configured
-	if s.token != "" {
-		clientToken := r.URL.Query().Get("token")
-		if clientToken == "" {
-			authHeader := r.Header.Get("Authorization")
-			if strings.HasPrefix(authHeader, "Bearer ") {
-				clientToken = strings.TrimPrefix(authHeader, "Bearer ")
-			}
-		}
-		if clientToken != s.token {
-			http.Error(w, "Unauthorized: Invalid or missing token", http.StatusUnauthorized)
-			log.Printf("[Gateway] Từ chối kết nối từ %s: Sai auth token", r.RemoteAddr)
-			return
-		}
+	if s.token != "" && !pairing.IsAuthorizedRequest(r, s.token) {
+		http.Error(w, "Unauthorized: Invalid or missing token", http.StatusUnauthorized)
+		log.Printf("[Gateway] Từ chối kết nối từ %s: Sai auth token", r.RemoteAddr)
+		return
 	}
 
 	ws, err := upgrader.Upgrade(w, r, nil)
