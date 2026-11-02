@@ -145,8 +145,8 @@ func (s *Server) HandleAPITunnelStart(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	if !pairing.IsAuthorizedRequest(r, s.GetToken()) {
-		http.Error(w, "Forbidden: host authorization required", http.StatusForbidden)
+	if !pairing.IsLoopbackRequest(r) {
+		http.Error(w, "Forbidden: host loopback required to start Quick Tunnel", http.StatusForbidden)
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 25*time.Second)
@@ -178,8 +178,8 @@ func (s *Server) HandleAPITunnelStop(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	if !pairing.IsAuthorizedRequest(r, s.GetToken()) {
-		http.Error(w, "Forbidden: host authorization required", http.StatusForbidden)
+	if !pairing.IsLoopbackRequest(r) {
+		http.Error(w, "Forbidden: host loopback required to stop Quick Tunnel", http.StatusForbidden)
 		return
 	}
 	_ = s.quickTunnel.Stop()
