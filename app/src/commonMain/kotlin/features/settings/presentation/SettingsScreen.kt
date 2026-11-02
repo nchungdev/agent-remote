@@ -125,7 +125,7 @@ fun SettingsScreen(
                             title = "Quản lý máy chủ kết nối",
                             subtitle = activeHostLabel,
                             statusDotColor = statusDotColor,
-                            badgeText = if (isConnected) "ĐÃ NỐI" else null,
+                            badgeText = if (isConnected) "ĐÃ KẾT NỐI" else null,
                             badgeColor = Color(0xFF22C55E),
                             onClick = { onOpenConnect?.invoke() }
                         )

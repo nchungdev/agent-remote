@@ -269,10 +269,14 @@ fun ConnectScreen(
                     extraSlots = extraSlots + AgentConnectionSlot(
                         id = slotId,
                         mode = mode,
-                        remoteRoomCode = if (mode == ConnectMode.Remote) "default" else ""
+                        remoteRoomCode = ""
                     )
                 }
                 showAddSlotPicker = false
+            },
+            onScanQrNow = {
+                showAddSlotPicker = false
+                triggerQrScan()
             }
         )
     }
