@@ -6,6 +6,17 @@ import app.duinch.agentremote.core.presentation.util.AppContextProvider
 import java.io.File
 
 actual class PlatformApkInstaller {
+    actual fun saveApkBytes(bytes: ByteArray): String {
+        val ctx = AppContextProvider.context ?: return ""
+        return try {
+            val file = File(ctx.cacheDir, "agent-remote-update.apk")
+            file.writeBytes(bytes)
+            file.absolutePath
+        } catch (e: Exception) {
+            ""
+        }
+    }
+
     actual fun installApk(filePath: String): Boolean {
         val ctx = AppContextProvider.context ?: return false
         return try {

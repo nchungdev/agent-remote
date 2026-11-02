@@ -20,6 +20,8 @@ class FakeAgentGatewayClient : AgentGatewayClient {
     private val _incomingEvents = MutableSharedFlow<DomainGatewayEvent>(extraBufferCapacity = 64)
     override val incomingEvents: Flow<DomainGatewayEvent> = _incomingEvents.asSharedFlow()
 
+    override var autoReconnectEnabled: Boolean = true
+
     val sentPrompts = mutableListOf<String>()
     val toolApprovals = mutableListOf<Pair<String, Boolean>>()
 

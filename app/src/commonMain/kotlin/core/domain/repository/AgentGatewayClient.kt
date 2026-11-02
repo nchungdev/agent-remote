@@ -11,6 +11,9 @@ import kotlinx.coroutines.flow.StateFlow
 interface AgentGatewayClient {
     val connectionState: StateFlow<ConnectionStatus>
     val incomingEvents: Flow<DomainGatewayEvent>
+    var autoReconnectEnabled: Boolean
+        get() = true
+        set(_) {}
 
     suspend fun connect(url: String, token: String? = null): AppResult<Unit, DomainError>
     suspend fun disconnect()

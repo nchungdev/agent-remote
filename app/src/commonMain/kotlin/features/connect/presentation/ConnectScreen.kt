@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.sp
 import app.duinch.agentremote.core.domain.model.ConnectionStatus
 import app.duinch.agentremote.core.presentation.util.currentTimeMillis
 import app.duinch.agentremote.core.presentation.util.rememberPlatformQrScanner
+import app.duinch.agentremote.features.settings.data.PlatformSettingsStorage
 import app.duinch.remotetunnel.parser.RemoteQrPayloadParser
 import app.duinch.remotetunnel.ui.ConnectMode
 import app.duinch.remotetunnel.ui.ConnectionTelemetryBar
@@ -71,7 +72,9 @@ fun ConnectScreen(
     var showAddSlotPicker by remember { mutableStateOf(false) }
     var recentTunnels by remember {
         mutableStateOf(
-            if (currentHost.contains("trycloudflare.com")) listOf(currentHost) else emptyList()
+            PlatformSettingsStorage().load().recentTunnels.ifEmpty {
+                if (currentHost.contains("trycloudflare.com")) listOf(currentHost) else emptyList()
+            }
         )
     }
 

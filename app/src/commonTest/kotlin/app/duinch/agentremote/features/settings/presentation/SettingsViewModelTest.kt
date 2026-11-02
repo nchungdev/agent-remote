@@ -53,7 +53,7 @@ class SettingsViewModelTest {
 
         val status = viewModel.uiState.value.updateStatus
         assertIs<UpdateStatus.UpToDate>(status)
-        assertTrue(status.currentVersion.contains("0.1.3"))
+        assertTrue(status.currentVersion.contains("0.1.4"))
     }
 
     @Test
@@ -104,5 +104,18 @@ class SettingsViewModelTest {
         advanceUntilIdle()
 
         assertNotNull(viewModel.uiState.value.pingMs)
+    }
+
+    @Test
+    fun testToggleSettingsUpdatesStateAndGatewayClient() = runTest(testDispatcher) {
+        viewModel.processIntent(SettingsIntent.ToggleAutoReconnect(false))
+        viewModel.processIntent(SettingsIntent.ToggleNotifyConnectionChange(false))
+        viewModel.processIntent(SettingsIntent.ToggleNotifyAgentApproval(false))
+
+        val state = viewModel.uiState.value
+        assertEquals(false, state.autoReconnect)
+        assertEquals(false, state.notifyConnectionChange)
+        assertEquals(false, state.notifyAgentApproval)
+        assertEquals(false, fakeGatewayClient.autoReconnectEnabled)
     }
 }

@@ -12,9 +12,11 @@ import app.duinch.agentremote.core.domain.model.ToolStatus
 import app.duinch.agentremote.core.domain.repository.AgentGatewayClient
 import app.duinch.agentremote.core.domain.result.AppResult
 import app.duinch.agentremote.core.domain.result.DomainError
+import app.duinch.agentremote.core.presentation.util.PlatformAlertNotifier
 import app.duinch.agentremote.features.chat.presentation.contract.ChatEffect
 import app.duinch.agentremote.features.chat.presentation.contract.ChatIntent
 import app.duinch.agentremote.features.chat.presentation.contract.ChatUiState
+import app.duinch.agentremote.features.settings.data.PlatformSettingsStorage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -28,16 +30,25 @@ import kotlinx.coroutines.launch
 
 class ChatViewModel(
     private val gatewayClient: AgentGatewayClient,
+    private val storage: PlatformSettingsStorage = PlatformSettingsStorage(),
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Main)
 ) {
 
-    private val _uiState = MutableStateFlow(ChatUiState())
+    private val initialPrefs = storage.load()
+
+    private val _uiState = MutableStateFlow(
+        ChatUiState(
+            gatewayUrl = initialPrefs.lastGatewayUrl,
+            selectedAgent = initialPrefs.defaultAgent
+        )
+    )
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
 
     private val _effects = MutableSharedFlow<ChatEffect>(extraBufferCapacity = 16)
     val effects: SharedFlow<ChatEffect> = _effects.asSharedFlow()
 
     private var currentAssistantMsgId: String? = null
+    private var previousConnectionStatus: ConnectionStatus? = null
 
     init {
         observeConnection()
@@ -47,7 +58,32 @@ class ChatViewModel(
     private fun observeConnection() {
         scope.launch {
             gatewayClient.connectionState.collect { status ->
+                val prev = previousConnectionStatus
+                previousConnectionStatus = status
                 _uiState.update { it.copy(connectionStatus = status) }
+
+                val prefs = storage.load()
+                if (prefs.notifyConnectionChange && prev != null) {
+                    when {
+                        status is ConnectionStatus.Connected && prev !is ConnectionStatus.Connected ->
+                            PlatformAlertNotifier.notifyConnectionChange(
+                                title = "Đã kết nối Agent Gateway",
+                                message = "Đã kết nối tới máy chủ ${status.host}"
+                            )
+                        status is ConnectionStatus.Disconnected &&
+                            (prev is ConnectionStatus.Connected || prev is ConnectionStatus.Reconnecting) ->
+                            PlatformAlertNotifier.notifyConnectionChange(
+                                title = "Đã ngắt kết nối",
+                                message = "Đã ngắt kết nối với máy chủ Agent Gateway"
+                            )
+                        status is ConnectionStatus.Error && prev !is ConnectionStatus.Error ->
+                            PlatformAlertNotifier.notifyConnectionChange(
+                                title = "Lỗi kết nối máy chủ",
+                                message = status.message
+                            )
+                    }
+                }
+
                 if (status is ConnectionStatus.Connected) {
                     _uiState.update { it.copy(selectedAgent = status.agentType) }
                     gatewayClient.requestCatalog()
@@ -115,6 +151,12 @@ class ChatViewModel(
             is DomainGatewayEvent.ApprovalRequired -> {
                 _uiState.update { it.copy(pendingApproval = event.request) }
                 _effects.tryEmit(ChatEffect.TriggerHapticFeedback)
+                if (storage.load().notifyAgentApproval) {
+                    PlatformAlertNotifier.notifyAgentApproval(
+                        toolName = event.request.toolName,
+                        description = event.request.summary
+                    )
+                }
             }
 
             is DomainGatewayEvent.ToolResultReceived -> {
@@ -183,6 +225,13 @@ class ChatViewModel(
 
     private fun connect(url: String) {
         _uiState.update { it.copy(gatewayUrl = url) }
+        val prefs = storage.load()
+        val updatedRecents = if (url.contains("trycloudflare.com") || url.matches(Regex("""^\d{3}-?\d{3}$"""))) {
+            (listOf(url) + prefs.recentTunnels).distinct().take(3)
+        } else {
+            prefs.recentTunnels
+        }
+        storage.save(prefs.copy(lastGatewayUrl = url, recentTunnels = updatedRecents))
         scope.launch {
             gatewayClient.connect(url)
         }

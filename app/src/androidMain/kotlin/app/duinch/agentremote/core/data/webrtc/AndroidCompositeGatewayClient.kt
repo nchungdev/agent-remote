@@ -33,6 +33,12 @@ class AndroidCompositeGatewayClient(
     private val _incomingEvents = MutableSharedFlow<DomainGatewayEvent>(extraBufferCapacity = 64)
     override val incomingEvents: Flow<DomainGatewayEvent> = _incomingEvents.asSharedFlow()
 
+    override var autoReconnectEnabled: Boolean = true
+        set(value) {
+            field = value
+            activeClient.autoReconnectEnabled = value
+        }
+
     private fun isRoomCode(target: String): Boolean {
         val clean = target.trim().removePrefix("room:").removePrefix("webrtc://").trim()
         val digits = clean.replace("-", "")
@@ -47,6 +53,7 @@ class AndroidCompositeGatewayClient(
         } else {
             KtorWebSocketClient()
         }
+        selectedClient.autoReconnectEnabled = autoReconnectEnabled
         activeClient = selectedClient
 
         observeJob?.cancel()

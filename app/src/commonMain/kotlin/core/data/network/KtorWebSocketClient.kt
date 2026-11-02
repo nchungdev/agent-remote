@@ -56,6 +56,8 @@ class KtorWebSocketClient(
     private val _incomingEvents = MutableSharedFlow<DomainGatewayEvent>(extraBufferCapacity = 64)
     override val incomingEvents: Flow<DomainGatewayEvent> = _incomingEvents.asSharedFlow()
 
+    override var autoReconnectEnabled: Boolean = true
+
     override suspend fun connect(url: String, token: String?): AppResult<Unit, DomainError> {
         disconnect()
         _connectionState.value = ConnectionStatus.Connecting
@@ -95,7 +97,7 @@ class KtorWebSocketClient(
                     } finally {
                         activeSession = null
                     }
-                    if (!isActive) break
+                    if (!isActive || !autoReconnectEnabled) break
                     delay(retryDelay)
                     retryDelay = (retryDelay * 2).coerceAtMost(8000L)
                 }

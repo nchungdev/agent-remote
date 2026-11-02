@@ -23,8 +23,8 @@ class GitHubAppUpdateRepository(
     private val installer: PlatformApkInstaller = PlatformApkInstaller()
 ) : AppUpdateRepository {
 
-    override val currentVersionName: String = "0.1.3"
-    override val currentVersionCode: Int = 4
+    override val currentVersionName: String = "0.1.4"
+    override val currentVersionCode: Int = 5
 
     override suspend fun checkUpdate(
         repoOwner: String,
@@ -89,9 +89,12 @@ class GitHubAppUpdateRepository(
                 }
             }
 
-            // In commonMain without java.io.File, we can write bytes to platform cache or return status
-            // For now, write via channel or expect/actual file cache
-            AppResult.Success("update_downloaded.apk")
+            val bytes = response.bodyAsChannel().readRemaining().readByteArray()
+            val savedPath = installer.saveApkBytes(bytes)
+            if (savedPath.isBlank()) {
+                return AppResult.Failure(DomainError.Network("Không thể lưu tệp APK vào bộ nhớ đệm"))
+            }
+            AppResult.Success(savedPath)
         } catch (e: Exception) {
             AppResult.Failure(DomainError.Network("Lỗi tải tệp APK: ${e.message}", e))
         }

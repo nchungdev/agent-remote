@@ -5,7 +5,7 @@ import app.duinch.agentremote.core.domain.result.DomainError
 import app.duinch.agentremote.features.updater.domain.model.AppRelease
 
 class FakeAppUpdateRepository(
-    override val currentVersionName: String = "0.1.3",
+    override val currentVersionName: String = "0.1.4",
     override val currentVersionCode: Int = 1,
     var mockRelease: AppRelease? = null,
     var shouldFail: Boolean = false
