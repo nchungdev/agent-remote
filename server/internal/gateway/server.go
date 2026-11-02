@@ -15,6 +15,7 @@ import (
 
 	"app.duinch.agentremote/server/internal/adapter"
 	"app.duinch.agentremote/server/internal/catalog"
+	zeroconfadv "app.duinch.agentremote/server/internal/discovery"
 	"app.duinch.agentremote/server/internal/protocol"
 	"app.duinch.agentremote/server/internal/webrtc"
 	"github.com/gorilla/websocket"
@@ -356,6 +357,9 @@ func (s *Server) Start() error {
 		}()
 	}
 	s.serverMu.Unlock()
+
+	mdnsAdv := zeroconfadv.Start("_agent-remote._tcp", s.port, nil)
+	defer mdnsAdv.Stop()
 
 	log.Printf("[Gateway] Khởi động Agent Remote Gateway tại ws://%s (Room P2P: %s)", addr, s.roomCode)
 	err := s.httpServer.ListenAndServe()
