@@ -50,6 +50,8 @@ jobs:
           echo "clean_version=$CLEAN_VER" >> $GITHUB_OUTPUT
           mkdir -p release-assets
           cp app/build/outputs/apk/release/agent-remote-app-release.apk "release-assets/agent-remote-android-${CLEAN_VER}.apk"
+          APK_SHA256=$(shasum -a 256 "release-assets/agent-remote-android-${CLEAN_VER}.apk" | awk '{print $1}')
+          echo "apk_sha256=$APK_SHA256" >> $GITHUB_OUTPUT
 
       - name: Publish GitHub Release (App Only)
         uses: softprops/action-gh-release@v2
@@ -63,3 +65,4 @@ jobs:
 
             #### Cài đặt
             - Tải file `.apk` đính kèm bên dưới và mở trên điện thoại Android để cài đặt hoặc cập nhật.
+            - **SHA-256**: `${{ steps.version_step.outputs.apk_sha256 }}`
