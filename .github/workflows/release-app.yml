@@ -49,8 +49,8 @@ jobs:
           echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "clean_version=$CLEAN_VER" >> $GITHUB_OUTPUT
           mkdir -p release-assets
-          cp app/build/outputs/apk/release/agent-remote-app-release.apk "release-assets/agent-remote-android-${CLEAN_VER}.apk"
-          APK_SHA256=$(shasum -a 256 "release-assets/agent-remote-android-${CLEAN_VER}.apk" | awk '{print $1}')
+          cp app/build/outputs/apk/release/agent-remote-release.apk "release-assets/agent-remote-release.apk"
+          APK_SHA256=$(shasum -a 256 "release-assets/agent-remote-release.apk" | awk '{print $1}')
           echo "apk_sha256=$APK_SHA256" >> $GITHUB_OUTPUT
 
       - name: Publish GitHub Release (App Only)
