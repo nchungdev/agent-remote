@@ -53,7 +53,7 @@ class SettingsViewModelTest {
 
         val status = viewModel.uiState.value.updateStatus
         assertIs<UpdateStatus.UpToDate>(status)
-        assertTrue(status.currentVersion.contains("0.1.0"))
+        assertTrue(status.currentVersion.contains("0.1.1"))
     }
 
     @Test
