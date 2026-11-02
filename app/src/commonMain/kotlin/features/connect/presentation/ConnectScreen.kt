@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -112,154 +113,143 @@ fun ConnectScreen(
         if (currentHost.contains("trycloudflare.com") || currentHost.matches(Regex("""^\d{3}-?\d{3}$"""))) currentHost else ""
     }
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(Color(0xFF141416))
-            .statusBarsPadding()
-            .navigationBarsPadding()
-            .imePadding()
-    ) {
-        Column(
+    val triggerQrScan = {
+        qrScanner.startScan { raw ->
+            val parsed = RemoteQrPayloadParser.parse(raw)
+            val target = parsed?.lan?.takeIf { it.isNotBlank() }
+                ?: parsed?.url?.takeIf { it.isNotBlank() }
+                ?: parsed?.roomCode?.takeIf { it.isNotBlank() }
+                ?: raw.trim()
+            if (target.isNotBlank()) {
+                onConnect(target)
+            }
+        }
+    }
+
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        containerColor = Color(0xFF141416),
+        topBar = {
+            ConnectTopBar(
+                onScanQr = triggerQrScan,
+                onOpenSettings = onOpenSettings
+            )
+        }
+    ) { innerPadding ->
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 8.dp)
-                .widthIn(max = 480.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(innerPadding)
+                .imePadding()
         ) {
-            // Unified Telemetry Ribbon (Bento Bar) - chỉ hiển thị khi đang kết nối hoặc đã kết nối
-            if (telemetry.state != RemoteConnectionState.Disconnected) {
-                ConnectionTelemetryBar(
-                    telemetry = telemetry,
-                    onTriggerConnect = {
-                        qrScanner.startScan { raw ->
-                            val parsed = RemoteQrPayloadParser.parse(raw)
-                            val target = parsed?.lan?.takeIf { it.isNotBlank() }
-                                ?: parsed?.url?.takeIf { it.isNotBlank() }
-                                ?: parsed?.roomCode?.takeIf { it.isNotBlank() }
-                                ?: raw.trim()
-                            if (target.isNotBlank()) {
-                                onConnect(target)
-                            }
-                        }
-                    }
-                )
-                Spacer(modifier = Modifier.height(14.dp))
-            }
-
-            val showPrimary = hasPrimarySlot || telemetry.state != RemoteConnectionState.Disconnected
-
-            if (!showPrimary && extraSlots.isEmpty()) {
-                EmptyAgentConnectionCard(modifier = Modifier.fillMaxWidth())
-            }
-
-            // Máy Chủ 1 (Kết Nối Máy Chủ Chính)
-            if (showPrimary) {
-                DualChannelConnectContent(
-                    title = if (extraSlots.isNotEmpty()) "Máy Chủ 1" else "Kết Nối Máy Chủ",
-                    dedicatedMode = primarySlotMode,
-                    initialLanAddress = initialLan,
-                    initialRemoteTarget = initialRemote,
-                    telemetry = telemetry,
-                    recentTunnels = recentTunnels,
-                    onClose = {
-                        onDisconnect()
-                        hasPrimarySlot = false
-                    },
-                    onConnect = { lan, remote ->
-                        val isUrl = remote.startsWith("http://") || remote.startsWith("https://") || remote.contains("trycloudflare.com")
-                        val target = when {
-                            lan.isNotBlank() -> lan
-                            isUrl -> remote
-                            remote.isNotBlank() -> remote
-                            else -> currentHost
-                        }
-                        if (target.isNotBlank()) {
-                            if (target.contains("trycloudflare.com") || target.matches(Regex("""^\d{3}-?\d{3}$"""))) {
-                                recentTunnels = (listOf(target) + recentTunnels).distinct().take(3)
-                            }
-                            onConnect(target)
-                        }
-                    },
-                    onDisconnect = onDisconnect,
-                    onScanQr = {
-                        qrScanner.startScan { raw ->
-                            val parsed = RemoteQrPayloadParser.parse(raw)
-                            val target = parsed?.lan?.takeIf { it.isNotBlank() }
-                                ?: parsed?.url?.takeIf { it.isNotBlank() }
-                                ?: parsed?.roomCode?.takeIf { it.isNotBlank() }
-                                ?: raw.trim()
-                            if (target.isNotBlank()) {
-                                onConnect(target)
-                            }
-                        }
-                    }
-                )
-            }
-
-            // Danh sách các Máy Chủ kết nối phụ (Được thêm qua [+ Thêm máy chủ kết nối])
-            extraSlots.forEachIndexed { index, slot ->
-                if (showPrimary || index > 0) {
-                    Spacer(modifier = Modifier.height(18.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp, vertical = 8.dp)
+                    .widthIn(max = 480.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Unified Telemetry Ribbon (Bento Bar) - chỉ hiển thị khi đang kết nối hoặc đã kết nối
+                if (telemetry.state != RemoteConnectionState.Disconnected) {
+                    ConnectionTelemetryBar(
+                        telemetry = telemetry,
+                        onTriggerConnect = triggerQrScan
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
                 }
-                val slotNum = if (showPrimary) index + 2 else index + 1
-                val slotTitle = if (!showPrimary && extraSlots.size == 1) "Kết Nối Máy Chủ" else "Máy Chủ $slotNum"
-                val isThisSlotConnected = (currentHost == slot.serverUrlInput && currentHost.isNotBlank()) ||
-                    (currentHost == slot.remoteRoomCode && currentHost.isNotBlank())
-                val slotConnState = if (isThisSlotConnected) telemetry.state else RemoteConnectionState.Disconnected
-                val slotTelemetry = remember(slot.serverUrlInput, slot.remoteRoomCode, slotConnState) {
-                    RemoteTelemetryData(
-                        state = slotConnState,
-                        channel = if (slot.mode == ConnectMode.Lan) RemoteTransportChannel.LanWifi else RemoteTransportChannel.QuickTunnel,
-                        host = slot.serverUrlInput,
-                        roomCode = slot.remoteRoomCode
+
+                val showPrimary = hasPrimarySlot || telemetry.state != RemoteConnectionState.Disconnected
+
+                if (!showPrimary && extraSlots.isEmpty()) {
+                    EmptyAgentConnectionCard(modifier = Modifier.fillMaxWidth())
+                }
+
+                // Máy Chủ 1 (Kết Nối Máy Chủ Chính)
+                if (showPrimary) {
+                    DualChannelConnectContent(
+                        title = if (extraSlots.isNotEmpty()) "Máy Chủ 1" else "Kết Nối Máy Chủ",
+                        dedicatedMode = primarySlotMode,
+                        initialLanAddress = initialLan,
+                        initialRemoteTarget = initialRemote,
+                        telemetry = telemetry,
+                        recentTunnels = recentTunnels,
+                        onClose = {
+                            onDisconnect()
+                            hasPrimarySlot = false
+                        },
+                        onConnect = { lan, remote ->
+                            val isUrl = remote.startsWith("http://") || remote.startsWith("https://") || remote.contains("trycloudflare.com")
+                            val target = when {
+                                lan.isNotBlank() -> lan
+                                isUrl -> remote
+                                remote.isNotBlank() -> remote
+                                else -> currentHost
+                            }
+                            if (target.isNotBlank()) {
+                                if (target.contains("trycloudflare.com") || target.matches(Regex("""^\d{3}-?\d{3}$"""))) {
+                                    recentTunnels = (listOf(target) + recentTunnels).distinct().take(3)
+                                }
+                                onConnect(target)
+                            }
+                        },
+                        onDisconnect = onDisconnect,
+                        onScanQr = triggerQrScan
                     )
                 }
-                DualChannelConnectContent(
-                    title = slotTitle,
-                    dedicatedMode = slot.mode,
-                    initialLanAddress = slot.serverUrlInput,
-                    initialRemoteTarget = slot.remoteRoomCode,
-                    telemetry = slotTelemetry,
-                    recentTunnels = recentTunnels,
-                    onClose = { extraSlots = extraSlots.filterNot { it.id == slot.id } },
-                    onConnect = { lan, remote ->
-                        val target = if (lan.isNotBlank()) lan else remote
-                        if (target.isNotBlank()) {
-                            if (target.contains("trycloudflare.com") || target.matches(Regex("""^\d{3}-?\d{3}$"""))) {
-                                recentTunnels = (listOf(target) + recentTunnels).distinct().take(3)
-                            }
-                            onConnect(target)
-                        }
-                    },
-                    onDisconnect = onDisconnect,
-                    onScanQr = {
-                        qrScanner.startScan { raw ->
-                            val parsed = RemoteQrPayloadParser.parse(raw)
-                            val target = parsed?.lan?.takeIf { it.isNotBlank() }
-                                ?: parsed?.url?.takeIf { it.isNotBlank() }
-                                ?: parsed?.roomCode?.takeIf { it.isNotBlank() }
-                                ?: raw.trim()
+
+                // Danh sách các Máy Chủ kết nối phụ (Được thêm qua [+ Thêm máy chủ kết nối])
+                extraSlots.forEachIndexed { index, slot ->
+                    if (showPrimary || index > 0) {
+                        Spacer(modifier = Modifier.height(18.dp))
+                    }
+                    val slotNum = if (showPrimary) index + 2 else index + 1
+                    val slotTitle = if (!showPrimary && extraSlots.size == 1) "Kết Nối Máy Chủ" else "Máy Chủ $slotNum"
+                    val isThisSlotConnected = (currentHost == slot.serverUrlInput && currentHost.isNotBlank()) ||
+                        (currentHost == slot.remoteRoomCode && currentHost.isNotBlank())
+                    val slotConnState = if (isThisSlotConnected) telemetry.state else RemoteConnectionState.Disconnected
+                    val slotTelemetry = remember(slot.serverUrlInput, slot.remoteRoomCode, slotConnState) {
+                        RemoteTelemetryData(
+                            state = slotConnState,
+                            channel = if (slot.mode == ConnectMode.Lan) RemoteTransportChannel.LanWifi else RemoteTransportChannel.QuickTunnel,
+                            host = slot.serverUrlInput,
+                            roomCode = slot.remoteRoomCode
+                        )
+                    }
+                    DualChannelConnectContent(
+                        title = slotTitle,
+                        dedicatedMode = slot.mode,
+                        initialLanAddress = slot.serverUrlInput,
+                        initialRemoteTarget = slot.remoteRoomCode,
+                        telemetry = slotTelemetry,
+                        recentTunnels = recentTunnels,
+                        onClose = { extraSlots = extraSlots.filterNot { it.id == slot.id } },
+                        onConnect = { lan, remote ->
+                            val target = if (lan.isNotBlank()) lan else remote
                             if (target.isNotBlank()) {
+                                if (target.contains("trycloudflare.com") || target.matches(Regex("""^\d{3}-?\d{3}$"""))) {
+                                    recentTunnels = (listOf(target) + recentTunnels).distinct().take(3)
+                                }
                                 onConnect(target)
                             }
-                        }
-                    }
-                )
-            }
+                        },
+                        onDisconnect = onDisconnect,
+                        onScanQr = triggerQrScan
+                    )
+                }
 
-            Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.height(18.dp))
 
-            // Nút Thêm máy chủ kết nối mới
-            OutlinedButton(
-                onClick = { showAddSlotPicker = true },
-                modifier = Modifier.fillMaxWidth().height(48.dp),
-                shape = RoundedCornerShape(14.dp)
-            ) {
-                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Thêm máy chủ kết nối", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                // Nút Thêm máy chủ kết nối mới
+                OutlinedButton(
+                    onClick = { showAddSlotPicker = true },
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Thêm máy chủ kết nối", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                }
             }
         }
     }

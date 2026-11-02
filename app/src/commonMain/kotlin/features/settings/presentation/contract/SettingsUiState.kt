@@ -10,7 +10,7 @@ data class SettingsUiState(
     val isPinging: Boolean = false,
     val defaultAgent: AgentType = AgentType.ANTIGRAVITY,
     val updateStatus: UpdateStatus = UpdateStatus.Idle,
-    val currentVersionName: String = "0.1.1",
+    val currentVersionName: String = "0.1.2",
     val currentVersionCode: Int = 1,
     val githubRepoOwner: String = "nchungdev",
     val githubRepoName: String = "agent-remote",
