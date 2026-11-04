@@ -8,7 +8,9 @@ import app.duinch.agentremote.core.domain.model.MessageRole
 import app.duinch.agentremote.core.domain.model.ToolCall
 import app.duinch.agentremote.core.domain.model.ToolStatus
 import app.duinch.agentremote.core.domain.result.DomainError
+import app.duinch.agentremote.features.chat.presentation.contract.AttachedFileItem
 import app.duinch.agentremote.features.chat.presentation.contract.ChatUiState
+import app.duinch.agentremote.features.chat.presentation.contract.QueuedMessage
 
 internal object ChatStateReducer {
 
@@ -126,5 +128,24 @@ internal object ChatStateReducer {
             history
         }
         return merged.distinctBy { it.id }
+    }
+
+    fun queuePrompt(current: ChatUiState, rawText: String, attachments: List<AttachedFileItem>, timestamp: Long): ChatUiState =
+        current.copy(
+            queuedMessages = current.queuedMessages + QueuedMessage("queue_$timestamp", rawText, attachments, timestamp),
+            inputText = "",
+            attachedFiles = emptyList()
+        )
+
+    fun removeQueued(current: ChatUiState, queueId: String): ChatUiState =
+        current.copy(queuedMessages = current.queuedMessages.filterNot { it.id == queueId })
+
+    fun editQueued(current: ChatUiState, queueId: String): ChatUiState {
+        val item = current.queuedMessages.firstOrNull { it.id == queueId } ?: return current
+        return current.copy(
+            queuedMessages = current.queuedMessages.filterNot { it.id == queueId },
+            inputText = item.text,
+            attachedFiles = item.attachments
+        )
     }
 }

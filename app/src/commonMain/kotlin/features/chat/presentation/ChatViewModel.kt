@@ -14,6 +14,7 @@ import app.duinch.agentremote.features.chat.presentation.contract.AttachedFileIt
 import app.duinch.agentremote.features.chat.presentation.contract.ChatEffect
 import app.duinch.agentremote.features.chat.presentation.contract.ChatIntent
 import app.duinch.agentremote.features.chat.presentation.contract.ChatUiState
+import app.duinch.agentremote.features.chat.presentation.contract.QueuedMessage
 import app.duinch.agentremote.features.settings.data.PlatformSettingsStorage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -159,6 +160,7 @@ class ChatViewModel(
                     val next = ChatStateReducer.finishStreaming(state, finishedId)
                     next.copy(activeConversationId = next.activeConversationId ?: event.conversationId)
                 }
+                checkAndSendNextQueued()
             }
 
             is DomainGatewayEvent.ErrorOccurred -> {
@@ -246,6 +248,9 @@ class ChatViewModel(
                 }
             }
             ChatIntent.SendPrompt -> sendPrompt()
+            is ChatIntent.SendQueuedNow -> handleSendQueuedNow(intent.queueId)
+            is ChatIntent.EditQueued -> _uiState.update { ChatStateReducer.editQueued(it, intent.queueId) }
+            is ChatIntent.RemoveQueued -> _uiState.update { ChatStateReducer.removeQueued(it, intent.queueId) }
             is ChatIntent.ApproveTool -> approveTool(intent.callId, intent.approved)
             ChatIntent.CancelTask -> cancelTask()
             is ChatIntent.UrlChanged -> _uiState.update { it.copy(gatewayUrl = intent.newUrl) }
@@ -339,63 +344,60 @@ class ChatViewModel(
             return
         }
 
+        val isBusy = _uiState.value.agentState.isBusy || _uiState.value.messages.any { it.isStreaming }
+        if (isBusy) {
+            _uiState.update { ChatStateReducer.queuePrompt(it, rawText, attachments, timestamp()) }
+            return
+        }
+
+        sendPromptDirect(rawText, attachments)
+    }
+
+    private fun sendPromptDirect(rawText: String, attachments: List<AttachedFileItem>) {
         val attachmentSuffix = if (attachments.isNotEmpty()) {
             val paths = attachments.joinToString(", ") { "${it.fileName} (${it.remotePath})" }
             if (rawText.isEmpty()) "Phân tích tệp đính kèm: $paths" else "\n\n[Tệp đính kèm: $paths]"
-        } else {
-            ""
-        }
+        } else ""
         val text = rawText + attachmentSuffix
 
-        val userMsg = ChatMessage(
-            id = "user_${timestamp()}",
-            role = MessageRole.USER,
-            content = text,
-            timestamp = timestamp()
-        )
-
+        val userMsg = ChatMessage(id = "user_${timestamp()}", role = MessageRole.USER, content = text, timestamp = timestamp())
         val assistantId = "assistant_${timestamp()}"
         currentAssistantMsgId = assistantId
-        val assistantMsg = ChatMessage(
-            id = assistantId,
-            role = MessageRole.ASSISTANT,
-            content = "",
-            isStreaming = true,
-            timestamp = timestamp()
-        )
+        val assistantMsg = ChatMessage(id = assistantId, role = MessageRole.ASSISTANT, content = "", isStreaming = true, timestamp = timestamp())
 
         _uiState.update {
-            it.copy(
-                messages = it.messages + userMsg + assistantMsg,
-                inputText = "",
-                attachedFiles = emptyList(),
-                agentState = AgentState.THINKING
-            )
+            it.copy(messages = it.messages + userMsg + assistantMsg, inputText = "", attachedFiles = emptyList(), agentState = AgentState.THINKING)
         }
         _effects.tryEmit(ChatEffect.ScrollToBottom)
 
         scope.launch {
-            val modelId = _uiState.value.selectedModel?.id
-            val convId = _uiState.value.activeConversationId
-            val permId = _uiState.value.selectedPermission?.id
-            val workspace = _uiState.value.activeWorkspace
-            val agent = _uiState.value.selectedAgent
-            val res = gatewayClient.sendPrompt(text, modelId, convId, permId, workspace, agent)
+            val s = _uiState.value
+            val res = gatewayClient.sendPrompt(text, s.selectedModel?.id, s.activeConversationId, s.selectedPermission?.id, s.activeWorkspace, s.selectedAgent)
             if (res is AppResult.Failure) {
                 val errMsg = ChatStateReducer.formatDomainError(res.error)
                 _uiState.update { state ->
                     val updated = state.messages.map { msg ->
-                        if (msg.id == assistantId) {
-                            msg.copy(
-                                content = "⚠️ Lỗi gửi lệnh: $errMsg. Vui lòng kiểm tra lại kết nối Gateway.",
-                                isStreaming = false
-                            )
-                        } else msg
+                        if (msg.id == assistantId) msg.copy(content = "⚠️ Lỗi gửi lệnh: $errMsg", isStreaming = false) else msg
                     }
                     state.copy(messages = updated, agentState = AgentState.ERROR)
                 }
             }
         }
+    }
+
+    private fun checkAndSendNextQueued() {
+        val queue = _uiState.value.queuedMessages
+        if (queue.isNotEmpty()) {
+            val next = queue.first()
+            _uiState.update { it.copy(queuedMessages = it.queuedMessages.drop(1)) }
+            sendPromptDirect(next.text, next.attachments)
+        }
+    }
+
+    private fun handleSendQueuedNow(queueId: String) {
+        val item = _uiState.value.queuedMessages.firstOrNull { it.id == queueId } ?: return
+        _uiState.update { ChatStateReducer.removeQueued(it, queueId) }
+        sendPromptDirect(item.text, item.attachments)
     }
 
     private fun approveTool(callId: String, approved: Boolean) {

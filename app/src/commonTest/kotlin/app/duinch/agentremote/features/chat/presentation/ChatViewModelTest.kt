@@ -95,4 +95,77 @@ class ChatViewModelTest {
         assertNull(viewModel.uiState.value.pendingApproval)
         assertEquals(listOf("call_99" to true), fakeClient.toolApprovals)
     }
+
+    @Test
+    fun testQueuedMessagesWhenAgentIsBusy() = runTest(testDispatcher) {
+        viewModel.processIntent(ChatIntent.Connect("127.0.0.1:8765"))
+        advanceUntilIdle()
+
+        // First prompt starts running
+        viewModel.processIntent(ChatIntent.InputChanged("Prompt 1"))
+        viewModel.processIntent(ChatIntent.SendPrompt)
+        advanceUntilIdle()
+
+        assertEquals(AgentState.THINKING, viewModel.uiState.value.agentState)
+        assertEquals(0, viewModel.uiState.value.queuedMessages.size)
+
+        // Second prompt while busy gets queued
+        viewModel.processIntent(ChatIntent.InputChanged("Prompt 2 queued"))
+        viewModel.processIntent(ChatIntent.SendPrompt)
+        advanceUntilIdle()
+
+        assertEquals(1, viewModel.uiState.value.queuedMessages.size)
+        assertEquals("Prompt 2 queued", viewModel.uiState.value.queuedMessages.first().text)
+        assertEquals("", viewModel.uiState.value.inputText)
+
+        // Third prompt while busy gets queued
+        viewModel.processIntent(ChatIntent.InputChanged("Prompt 3 queued"))
+        viewModel.processIntent(ChatIntent.SendPrompt)
+        advanceUntilIdle()
+
+        assertEquals(2, viewModel.uiState.value.queuedMessages.size)
+
+        // Agent completes first message -> automatically drains first queued message
+        fakeClient.emitEvent(DomainGatewayEvent.MessageCompleted("msg_1"))
+        advanceUntilIdle()
+
+        assertEquals(1, viewModel.uiState.value.queuedMessages.size)
+        assertEquals("Prompt 3 queued", viewModel.uiState.value.queuedMessages.first().text)
+    }
+
+    @Test
+    fun testEditAndRemoveQueuedMessages() = runTest(testDispatcher) {
+        viewModel.processIntent(ChatIntent.Connect("127.0.0.1:8765"))
+        advanceUntilIdle()
+
+        // Start task
+        viewModel.processIntent(ChatIntent.InputChanged("Running task"))
+        viewModel.processIntent(ChatIntent.SendPrompt)
+        advanceUntilIdle()
+
+        // Queue a message
+        viewModel.processIntent(ChatIntent.InputChanged("Queued item to edit"))
+        viewModel.processIntent(ChatIntent.SendPrompt)
+        advanceUntilIdle()
+
+        val queuedId = viewModel.uiState.value.queuedMessages.first().id
+
+        // Edit queued item: should populate inputText and remove from queue
+        viewModel.processIntent(ChatIntent.EditQueued(queuedId))
+        advanceUntilIdle()
+
+        assertEquals(0, viewModel.uiState.value.queuedMessages.size)
+        assertEquals("Queued item to edit", viewModel.uiState.value.inputText)
+
+        // Queue again and remove
+        viewModel.processIntent(ChatIntent.SendPrompt)
+        advanceUntilIdle()
+        assertEquals(1, viewModel.uiState.value.queuedMessages.size)
+
+        val newId = viewModel.uiState.value.queuedMessages.first().id
+        viewModel.processIntent(ChatIntent.RemoveQueued(newId))
+        advanceUntilIdle()
+
+        assertEquals(0, viewModel.uiState.value.queuedMessages.size)
+    }
 }

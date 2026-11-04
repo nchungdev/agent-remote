@@ -166,61 +166,11 @@ internal fun AttachedFilesStrip(
     isUploadingAttachment: Boolean,
     onRemoveAttachment: (String) -> Unit
 ) {
-    if (attachedFiles.isEmpty() && !isUploadingAttachment) return
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
-            .padding(bottom = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        attachedFiles.forEach { item ->
-            Surface(
-                shape = RoundedCornerShape(10.dp),
-                color = Color(0xFF22242B),
-                border = BorderStroke(1.dp, Color(0xFF32343E))
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.AttachFile,
-                        contentDescription = null,
-                        tint = Color(0xFF9EA0A8),
-                        modifier = Modifier.size(13.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = item.fileName,
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
-                        color = Color(0xFFE4E4E7),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.widthIn(max = 150.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Icon(
-                        imageVector = Icons.Outlined.Close,
-                        contentDescription = "Gỡ tệp",
-                        tint = Color(0xFF8A8D96),
-                        modifier = Modifier
-                            .size(14.dp)
-                            .clickable { onRemoveAttachment(item.remotePath) }
-                    )
-                }
-            }
-        }
-        if (isUploadingAttachment) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(16.dp),
-                strokeWidth = 1.8.dp,
-                color = Color(0xFFD4785A)
-            )
-        }
-    }
+    AttachedFilesPreviewStrip(
+        attachedFiles = attachedFiles,
+        isUploadingAttachment = isUploadingAttachment,
+        onRemoveAttachment = onRemoveAttachment
+    )
 }
 
 internal fun permissionOutlinedVector(type: PermissionIconType): ImageVector = when (type) {

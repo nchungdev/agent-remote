@@ -66,6 +66,7 @@ fun ConnectScreen(
     onConnect: (String) -> Unit,
     onDisconnect: () -> Unit = {},
     onOpenSettings: () -> Unit = {},
+    onClose: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val qrScanner = rememberPlatformQrScanner()
@@ -161,7 +162,8 @@ fun ConnectScreen(
         topBar = {
             ConnectTopBar(
                 onScanQr = triggerQrScan,
-                onOpenSettings = onOpenSettings
+                onOpenSettings = onOpenSettings,
+                onClose = onClose
             )
         }
     ) { innerPadding ->

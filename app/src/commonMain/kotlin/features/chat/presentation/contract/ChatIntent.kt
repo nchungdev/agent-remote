@@ -24,6 +24,9 @@ sealed interface ChatIntent {
     data class AttachFile(val fileName: String, val bytes: ByteArray) : ChatIntent
     data class RemoveAttachment(val remotePath: String) : ChatIntent
     data object SendPrompt : ChatIntent
+    data class SendQueuedNow(val queueId: String) : ChatIntent
+    data class EditQueued(val queueId: String) : ChatIntent
+    data class RemoveQueued(val queueId: String) : ChatIntent
     data class ApproveTool(val callId: String, val approved: Boolean) : ChatIntent
     data object CancelTask : ChatIntent
     data class UrlChanged(val newUrl: String) : ChatIntent

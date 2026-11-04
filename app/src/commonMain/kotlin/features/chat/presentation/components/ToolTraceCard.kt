@@ -70,11 +70,28 @@ fun ToolTraceCard(
         if (last.isNullOrBlank()) {
             null
         } else {
-            // If format is "run_command: Test something", show "Test something" or full summary
-            if (last.contains(":")) {
-                last.substringAfter(":").trim()
-            } else {
-                last
+            val lower = last.lowercase()
+            when {
+                lower.startsWith("read") || lower.contains("read_file") -> {
+                    val file = last.substringAfter(":").trim().substringAfterLast('/').substringAfterLast('\\')
+                    "Đọc ${if (file.isNotBlank()) file else "tệp"}"
+                }
+                lower.startsWith("edit") || lower.contains("edit_file") || lower.contains("write_file") -> {
+                    val file = last.substringAfter(":").trim().substringAfterLast('/').substringAfterLast('\\')
+                    "Chỉnh sửa ${if (file.isNotBlank()) file else "tệp"}"
+                }
+                lower.startsWith("run") || lower.contains("run_command") -> {
+                    val cmd = last.substringAfter(":").trim()
+                    val shortCmd = if (cmd.length > 38) cmd.take(35) + "..." else cmd
+                    "Chạy ${if (shortCmd.isNotBlank()) shortCmd else "lệnh"}"
+                }
+                lower.startsWith("search") || lower.contains("grep") -> {
+                    val q = last.substringAfter(":").trim()
+                    "Tìm kiếm ${if (q.isNotBlank()) q.take(28) else "mã nguồn"}"
+                }
+                else -> {
+                    if (last.contains(":")) last.substringAfter(":").trim() else last
+                }
             }
         }
     }
@@ -100,7 +117,7 @@ fun ToolTraceCard(
 
             if (isRunning) {
                 val runText = if (activeToolName != null) {
-                    "Đang chạy: $activeToolName"
+                    "Đang thực thi: $activeToolName"
                 } else {
                     "Đang thực thi công cụ..."
                 }
@@ -110,19 +127,24 @@ fun ToolTraceCard(
                         fontSize = 12.5.sp,
                         fontWeight = FontWeight.Medium
                     ),
-                    baseColor = Color(0xFFA1A1AA),
-                    highlightColor = Color(0xFFFDBA74)
+                    baseColor = Color(0xFF9E9EA8),
+                    highlightColor = Color(0xFFFFFFFF)
                 )
             } else {
+                val displayTitle = if (items.size > 1 && title == "Thực thi công cụ") {
+                    "Đã thực thi ${items.size} lệnh & tệp"
+                } else {
+                    title
+                }
                 Text(
-                    text = title,
+                    text = displayTitle,
                     style = MaterialTheme.typography.bodySmall.copy(
                         fontSize = 12.5.sp,
                         fontWeight = FontWeight.Medium
                     ),
                     color = Color(0xFFA1A1AA)
                 )
-                if (items.isNotEmpty()) {
+                if (items.isNotEmpty() && displayTitle == title) {
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = "(${items.size} tác vụ)",

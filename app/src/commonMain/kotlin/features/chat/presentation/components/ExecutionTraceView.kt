@@ -124,8 +124,8 @@ private fun TraceToolItem(toolCall: ToolCall) {
                         fontSize = 12.5.sp,
                         fontWeight = FontWeight.Medium
                     ),
-                    baseColor = Color(0xFFA1A1AA),
-                    highlightColor = Color(0xFFFDBA74)
+                    baseColor = Color(0xFF9E9EA8),
+                    highlightColor = Color(0xFFFFFFFF)
                 )
             } else {
                 Text(
@@ -265,8 +265,8 @@ private fun LiveWorkingIndicator() {
                 fontSize = 12.5.sp,
                 fontWeight = FontWeight.Medium
             ),
-            baseColor = Color(0xFFA1A1AA),
-            highlightColor = Color(0xFFFDE68A)
+            baseColor = Color(0xFF9E9EA8),
+            highlightColor = Color(0xFFFFFFFF)
         )
     }
 }

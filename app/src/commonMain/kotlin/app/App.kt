@@ -95,6 +95,10 @@ fun App() {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val coroutineScope = rememberCoroutineScope()
 
+    val isConnected = chatState.connectionStatus is ConnectionStatus.Connected
+    var isConnectOverlayDismissed by remember { mutableStateOf(false) }
+    val shouldShowConnectOverlay = !isConnected && !isConnectOverlayDismissed && currentScreen != AppScreen.SETTINGS
+
     var hasAutoConnected by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         if (!hasAutoConnected) {
@@ -111,6 +115,7 @@ fun App() {
     LaunchedEffect(chatState.connectionStatus) {
         val status = chatState.connectionStatus
         if (status is ConnectionStatus.Connected) {
+            isConnectOverlayDismissed = false
             val prefs = PlatformSettingsStorage().load()
             if (!hasRestoredSession) {
                 hasRestoredSession = true
@@ -127,16 +132,13 @@ fun App() {
                 } else {
                     chatViewModel.processIntent(ChatIntent.SelectAgent(agent))
                 }
+            } else {
+                chatViewModel.processIntent(ChatIntent.RefreshCatalog)
             }
             currentScreen = AppScreen.CHAT
         } else if (status is ConnectionStatus.Disconnected || status is ConnectionStatus.Error) {
             hasRestoredSession = false
-            if (currentScreen != AppScreen.SETTINGS) {
-                val prefs = PlatformSettingsStorage().load()
-                if (prefs.lastGatewayUrl.isBlank()) {
-                    currentScreen = AppScreen.CONNECT
-                }
-            }
+            isConnectOverlayDismissed = false
         }
     }
 
@@ -308,6 +310,7 @@ fun App() {
                                             previousScreen = currentScreen
                                             currentScreen = AppScreen.SETTINGS
                                         },
+                                        onOpenConnect = { isConnectOverlayDismissed = false },
                                         modifier = Modifier.weight(1f).fillMaxHeight()
                                     )
                                 }
@@ -319,6 +322,7 @@ fun App() {
                                         previousScreen = currentScreen
                                         currentScreen = AppScreen.SETTINGS
                                     },
+                                    onOpenConnect = { isConnectOverlayDismissed = false },
                                     modifier = Modifier.fillMaxSize()
                                 )
                             }
@@ -329,8 +333,9 @@ fun App() {
                                 viewModel = settingsViewModel,
                                 onBack = { currentScreen = previousScreen },
                                 onOpenConnect = {
+                                    isConnectOverlayDismissed = false
                                     previousScreen = currentScreen
-                                    currentScreen = AppScreen.CONNECT
+                                    currentScreen = AppScreen.CHAT
                                 },
                                 onOpenEngineSelector = {
                                     previousScreen = currentScreen
@@ -345,6 +350,30 @@ fun App() {
                                 modifier = Modifier.fillMaxSize()
                             )
                         }
+                    }
+
+                    if (shouldShowConnectOverlay) {
+                        ConnectScreen(
+                            currentHost = chatState.gatewayUrl,
+                            connectionStatus = chatState.connectionStatus,
+                            onConnect = { host ->
+                                chatViewModel.processIntent(ChatIntent.UrlChanged(host))
+                                chatViewModel.processIntent(ChatIntent.Connect(host))
+                            },
+                            onDisconnect = {
+                                chatViewModel.processIntent(ChatIntent.Disconnect)
+                                chatViewModel.processIntent(ChatIntent.UrlChanged(""))
+                            },
+                            onOpenSettings = {
+                                isConnectOverlayDismissed = true
+                                previousScreen = currentScreen
+                                currentScreen = AppScreen.SETTINGS
+                            },
+                            onClose = {
+                                isConnectOverlayDismissed = true
+                            },
+                            modifier = Modifier.fillMaxSize()
+                        )
                     }
                 }
             }

@@ -74,6 +74,7 @@ fun ChatScreen(
     viewModel: ChatViewModel,
     onOpenDrawer: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenConnect: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -120,7 +121,11 @@ fun ChatScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
+                    Column(
+                        modifier = Modifier.clickable {
+                            if (!state.connectionStatus.isConnected) onOpenConnect()
+                        }
+                    ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 text = state.activeConversationTitle ?: state.selectedAgent.displayName,
@@ -224,6 +229,10 @@ fun ChatScreen(
                         onProjectMentionSelected = { proj ->
                             viewModel.processIntent(ChatIntent.SelectWorkspace(proj.folders.firstOrNull()))
                         },
+                        queuedMessages = state.queuedMessages,
+                        onSendQueuedNow = { viewModel.processIntent(ChatIntent.SendQueuedNow(it)) },
+                        onEditQueued = { viewModel.processIntent(ChatIntent.EditQueued(it)) },
+                        onRemoveQueued = { viewModel.processIntent(ChatIntent.RemoveQueued(it)) },
                         onAttachClick = launchFilePicker,
                         onVoiceClick = launchVoiceInput
                     )

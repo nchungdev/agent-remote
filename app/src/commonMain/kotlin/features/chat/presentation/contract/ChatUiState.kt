@@ -14,6 +14,13 @@ data class AttachedFileItem(
     val remotePath: String
 )
 
+data class QueuedMessage(
+    val id: String,
+    val text: String,
+    val attachments: List<AttachedFileItem> = emptyList(),
+    val timestamp: Long = 0L
+)
+
 data class ChatUiState(
     val messages: List<ChatMessage> = emptyList(),
     val connectionStatus: ConnectionStatus = ConnectionStatus.Disconnected,
@@ -29,6 +36,7 @@ data class ChatUiState(
     val activeWorkspace: String? = null,
     val attachedFiles: List<AttachedFileItem> = emptyList(),
     val isUploadingAttachment: Boolean = false,
+    val queuedMessages: List<QueuedMessage> = emptyList(),
     val pendingApproval: ApprovalRequest? = null,
     val inputText: String = "",
     val gatewayUrl: String = "",
@@ -37,7 +45,6 @@ data class ChatUiState(
 ) {
     val canSendPrompt: Boolean
         get() = connectionStatus.isConnected &&
-            !agentState.isBusy &&
             !isUploadingAttachment &&
             (inputText.isNotBlank() || attachedFiles.isNotEmpty())
 }
