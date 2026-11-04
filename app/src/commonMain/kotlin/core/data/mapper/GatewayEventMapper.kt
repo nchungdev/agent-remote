@@ -7,11 +7,14 @@ import app.duinch.agentremote.core.domain.model.AgentType
 import app.duinch.agentremote.core.domain.model.ApprovalRequest
 import app.duinch.agentremote.core.domain.model.AgentModel
 import app.duinch.agentremote.core.domain.model.ChatMessage
+import app.duinch.agentremote.core.domain.model.ConsultBranchModel
 import app.duinch.agentremote.core.domain.model.DomainGatewayEvent
 import app.duinch.agentremote.core.domain.model.EngineCatalog
 import app.duinch.agentremote.core.domain.model.EngineConversation
 import app.duinch.agentremote.core.domain.model.EngineProject
 import app.duinch.agentremote.core.domain.model.MessageRole
+import app.duinch.agentremote.core.domain.model.ParentSession
+import app.duinch.agentremote.core.domain.model.WriterLease
 
 object GatewayEventMapper {
 
@@ -94,6 +97,32 @@ object GatewayEventMapper {
             }
 
             "PONG" -> DomainGatewayEvent.Pong
+
+            "WRITER_TRANSFERRED" -> DomainGatewayEvent.WriterTransferred(
+                sessionId = dto.sessionId.orEmpty(),
+                newWriter = dto.newWriter.orEmpty(),
+                revision = dto.revision ?: 1L
+            )
+
+            "CONSULT_BRANCH_RESULT" -> {
+                val branchObj = dto.branch
+                val branchId = branchObj?.get("branchId")?.toString()?.replace("\"", "").orEmpty()
+                val agentId = branchObj?.get("agentId")?.toString()?.replace("\"", "").orEmpty()
+                val engineStr = branchObj?.get("engine")?.toString()?.replace("\"", "").orEmpty()
+                val query = branchObj?.get("query")?.toString()?.replace("\"", "").orEmpty()
+                val response = branchObj?.get("response")?.toString()?.replace("\"", "").orEmpty()
+                val status = branchObj?.get("status")?.toString()?.replace("\"", "") ?: "COMPLETED"
+                DomainGatewayEvent.ConsultBranchResult(
+                    ConsultBranchModel(
+                        branchId = branchId,
+                        agentId = agentId,
+                        engine = AgentType.fromString(engineStr),
+                        query = query,
+                        response = response,
+                        status = status
+                    )
+                )
+            }
 
             else -> null
         }

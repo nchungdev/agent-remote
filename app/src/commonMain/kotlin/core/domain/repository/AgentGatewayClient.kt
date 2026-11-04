@@ -40,4 +40,26 @@ interface AgentGatewayClient {
     suspend fun approveTool(callId: String, approved: Boolean): AppResult<Unit, DomainError>
     suspend fun cancelTask(): AppResult<Unit, DomainError>
     suspend fun ping(): AppResult<Unit, DomainError>
+
+    suspend fun initParentSession(
+        parentSessionId: String? = null,
+        workspace: String? = null,
+        agentType: AgentType? = null,
+        model: String? = null
+    ): AppResult<Unit, DomainError> = AppResult.Success(Unit)
+
+    suspend fun transferWriter(
+        parentSessionId: String,
+        targetAgentId: String,
+        agentType: AgentType,
+        model: String? = null,
+        expectedRevision: Long
+    ): AppResult<Unit, DomainError> = AppResult.Success(Unit)
+
+    suspend fun consultBranch(
+        parentSessionId: String,
+        agentType: AgentType,
+        query: String,
+        model: String? = null
+    ): AppResult<Unit, DomainError> = AppResult.Success(Unit)
 }

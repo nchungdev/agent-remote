@@ -64,6 +64,17 @@ class ChatViewModel(
     private var currentAssistantMsgId: String? = null
     private var previousConnectionStatus: ConnectionStatus? = null
 
+    private val eventDispatcher = ChatEventDispatcher(
+        storage = storage,
+        updateState = { transform: (ChatUiState) -> ChatUiState -> _uiState.update(transform) },
+        emitEffect = { effect: ChatEffect -> _effects.tryEmit(effect) },
+        requestCatalog = { scope.launch { gatewayClient.requestCatalog() } },
+        getOrCreateAssistantMsgId = { currentAssistantMsgId ?: createAssistantMessage() },
+        getCurrentAssistantMsgId = { currentAssistantMsgId },
+        clearAssistantMsgId = { currentAssistantMsgId = null },
+        checkAndSendNextQueued = { checkAndSendNextQueued() }
+    )
+
     init {
         observeConnection()
         observeEvents()
@@ -106,94 +117,7 @@ class ChatViewModel(
     }
 
     private fun handleGatewayEvent(event: DomainGatewayEvent) {
-        when (event) {
-            is DomainGatewayEvent.SessionInit -> {
-                _uiState.update { ChatStateReducer.syncAgentPermissions(it, event.agentType) }
-                scope.launch { gatewayClient.requestCatalog() }
-            }
-
-            is DomainGatewayEvent.CatalogLoaded -> {
-                ConversationCache.putCatalog(event.catalog.agentType, event.catalog)
-                _uiState.update { ChatStateReducer.applyCatalogLoaded(it, event.catalog) }
-            }
-
-            is DomainGatewayEvent.AgentStateChanged -> {
-                if (event.state == AgentState.IDLE) {
-                    val s = _uiState.value
-                    s.activeConversationId?.let { id ->
-                        ConversationCache.put(id, s.messages, s.selectedModel?.id, s.tokenUsage)
-                    }
-                }
-                _uiState.update { it.copy(agentState = event.state) }
-            }
-
-            is DomainGatewayEvent.ThinkingChunk -> {
-                val currentId = currentAssistantMsgId ?: createAssistantMessage()
-                _uiState.update { ChatStateReducer.appendThinking(it, currentId, event.thought) }
-            }
-
-            is DomainGatewayEvent.TextChunk -> {
-                val currentId = currentAssistantMsgId ?: createAssistantMessage()
-                _uiState.update { ChatStateReducer.appendText(it, currentId, event.text) }
-            }
-
-            is DomainGatewayEvent.ToolCallStarted -> {
-                val currentId = currentAssistantMsgId ?: createAssistantMessage()
-                _uiState.update { ChatStateReducer.addToolCall(it, currentId, event.callId, event.toolName, event.argsJson) }
-            }
-
-            is DomainGatewayEvent.ApprovalRequired -> {
-                _uiState.update { it.copy(pendingApproval = event.request) }
-                _effects.tryEmit(ChatEffect.TriggerHapticFeedback)
-                if (storage.load().notifyAgentApproval) {
-                    PlatformAlertNotifier.notifyAgentApproval(
-                        toolName = event.request.toolName,
-                        description = event.request.summary
-                    )
-                }
-            }
-
-            is DomainGatewayEvent.ToolResultReceived -> {
-                val currentId = currentAssistantMsgId ?: return
-                _uiState.update { ChatStateReducer.updateToolResult(it, currentId, event.callId, event.output, event.isError) }
-            }
-
-            is DomainGatewayEvent.MessageCompleted -> {
-                val finishedId = currentAssistantMsgId
-                currentAssistantMsgId = null
-                _uiState.update { state ->
-                    val next = ChatStateReducer.finishStreaming(state, finishedId)
-                    next.copy(activeConversationId = next.activeConversationId ?: event.conversationId)
-                }
-                checkAndSendNextQueued()
-            }
-
-            is DomainGatewayEvent.ErrorOccurred -> {
-                val currentId = currentAssistantMsgId
-                currentAssistantMsgId = null
-                _uiState.update { ChatStateReducer.applyError(it, currentId, event.message) }
-                _effects.tryEmit(ChatEffect.ShowSnackbar(event.message))
-                _effects.tryEmit(ChatEffect.ScrollToBottom)
-            }
-
-            is DomainGatewayEvent.ConversationHistory -> {
-                if (_uiState.value.activeConversationId == event.conversationId) {
-                    _uiState.update { s ->
-                        val matched = ChatStateReducer.findMatchingModel(s.availableModels, event.activeModel)
-                        val merged = ChatStateReducer.mergeHistory(s, event.messages, currentAssistantMsgId)
-                        ConversationCache.put(event.conversationId, merged, event.activeModel, event.tokenUsage)
-                        s.copy(
-                            messages = merged,
-                            tokenUsage = event.tokenUsage ?: s.tokenUsage,
-                            selectedModel = matched ?: s.selectedModel
-                        )
-                    }
-                    _effects.tryEmit(ChatEffect.ScrollToBottom)
-                }
-            }
-
-            DomainGatewayEvent.Pong -> Unit
-        }
+        eventDispatcher.handleGatewayEvent(event, _uiState.value)
     }
 
     fun processIntent(intent: ChatIntent) {
@@ -343,11 +267,12 @@ class ChatViewModel(
     }
 
     private fun sendPrompt() {
-        val rawText = _uiState.value.inputText.trim()
+        val rawText = _uiState.value.inputText
         val attachments = _uiState.value.attachedFiles
-        if (rawText.isEmpty() && attachments.isEmpty()) return
+        if (rawText.isBlank() && attachments.isEmpty()) return
 
-        if (rawText.equals("/clear", ignoreCase = true) || rawText.equals("/new", ignoreCase = true)) {
+        val parsed = ChatPromptParser.parse(rawText, attachments, _uiState.value.selectedAgent)
+        if (parsed.isClearCommand) {
             _uiState.update {
                 it.copy(
                     activeConversationId = null,
@@ -362,7 +287,7 @@ class ChatViewModel(
 
         val isBusy = _uiState.value.agentState.isBusy || _uiState.value.messages.any { it.isStreaming }
         if (isBusy) {
-            _uiState.update { ChatStateReducer.queuePrompt(it, rawText, attachments, timestamp()) }
+            _uiState.update { ChatStateReducer.queuePrompt(it, rawText.trim(), attachments, timestamp()) }
             return
         }
 
@@ -370,17 +295,35 @@ class ChatViewModel(
     }
 
     private fun sendPromptDirect(rawText: String, attachments: List<AttachedFileItem>) {
-        val attachmentSuffix = if (attachments.isNotEmpty()) {
-            val paths = attachments.joinToString(", ") { "${it.fileName} (${it.remotePath})" }
-            if (rawText.isEmpty()) "Phân tích tệp đính kèm: $paths" else "\n\n[Tệp đính kèm: $paths]"
-        } else ""
-        val text = rawText + attachmentSuffix
+        val parsed = ChatPromptParser.parse(rawText, attachments, _uiState.value.selectedAgent)
+        val text = parsed.formattedText
 
         val userMsg = ChatMessage(id = "user_${timestamp()}", role = MessageRole.USER, content = text, timestamp = timestamp())
         val assistantId = "assistant_${timestamp()}"
         currentAssistantMsgId = assistantId
-        val assistantMsg = ChatMessage(id = assistantId, role = MessageRole.ASSISTANT, content = "", isStreaming = true, timestamp = timestamp())
 
+        if (parsed.consultTarget != null && parsed.consultQuery != null) {
+            val assistantMsg = ChatMessage(
+                id = assistantId,
+                role = MessageRole.ASSISTANT,
+                content = "🔍 Đang hỏi ý kiến ${parsed.consultTarget.displayName}...",
+                isStreaming = true,
+                timestamp = timestamp()
+            )
+            _uiState.update {
+                it.copy(messages = it.messages + userMsg + assistantMsg, inputText = "", attachedFiles = emptyList(), agentState = AgentState.THINKING)
+            }
+            _effects.tryEmit(ChatEffect.ScrollToBottom)
+
+            scope.launch {
+                val s = _uiState.value
+                val pSessionId = s.activeConversationId ?: "ps_${timestamp()}"
+                gatewayClient.consultBranch(pSessionId, parsed.consultTarget, parsed.consultQuery, s.selectedModel?.id)
+            }
+            return
+        }
+
+        val assistantMsg = ChatMessage(id = assistantId, role = MessageRole.ASSISTANT, content = "", isStreaming = true, timestamp = timestamp())
         _uiState.update {
             it.copy(messages = it.messages + userMsg + assistantMsg, inputText = "", attachedFiles = emptyList(), agentState = AgentState.THINKING)
         }

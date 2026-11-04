@@ -24,6 +24,7 @@ class FakeAgentGatewayClient : AgentGatewayClient {
 
     val sentPrompts = mutableListOf<String>()
     val toolApprovals = mutableListOf<Pair<String, Boolean>>()
+    val consultRequests = mutableListOf<Triple<String, AgentType, String>>()
 
     override suspend fun connect(url: String, token: String?): AppResult<Unit, DomainError> {
         _connectionState.value = ConnectionStatus.Connected(url, "fake_session", AgentType.MOCK)
@@ -77,6 +78,16 @@ class FakeAgentGatewayClient : AgentGatewayClient {
     }
 
     override suspend fun ping(): AppResult<Unit, DomainError> {
+        return AppResult.Success(Unit)
+    }
+
+    override suspend fun consultBranch(
+        parentSessionId: String,
+        agentType: AgentType,
+        query: String,
+        model: String?
+    ): AppResult<Unit, DomainError> {
+        consultRequests.add(Triple(parentSessionId, agentType, query))
         return AppResult.Success(Unit)
     }
 

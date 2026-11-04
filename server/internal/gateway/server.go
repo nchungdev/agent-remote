@@ -17,6 +17,7 @@ import (
 	"app.duinch.agentremote/server/internal/catalog"
 	zeroconfadv "app.duinch.agentremote/server/internal/discovery"
 	"app.duinch.agentremote/server/internal/protocol"
+	"app.duinch.agentremote/server/internal/session"
 	"app.duinch.agentremote/server/internal/webrtc"
 	"github.com/gorilla/websocket"
 	"github.com/nchungdev/remote-tunnel/go/pairing"
@@ -68,6 +69,7 @@ type Server struct {
 	startTime        time.Time
 	identity         ServerIdentity
 	serverMu         sync.Mutex
+	sessionMgr       *session.Manager
 }
 
 func NewServer(host string, port int, token string) *Server {
@@ -78,6 +80,12 @@ func NewServer(host string, port int, token string) *Server {
 	home, _ := os.UserHomeDir()
 	dataDir := filepath.Join(home, ".agent-remote")
 	identity, _ := LoadServerIdentity(dataDir)
+
+	reg := session.DefaultRegistry()
+	reg.Register(session.NewCodexSessionAdapter())
+	dbPath := filepath.Join(dataDir, "sessions.db")
+	sessStore, _ := session.NewStore(dbPath)
+	sessMgr := session.NewManager(reg, sessStore)
 
 	adapters := map[protocol.AgentType]adapter.Adapter{
 		protocol.AgentTypeMock:        adapter.NewMockAdapter(),
@@ -95,6 +103,7 @@ func NewServer(host string, port int, token string) *Server {
 		identity:         identity,
 		currentAgentType: protocol.AgentTypeMock,
 		adapters:         adapters,
+		sessionMgr:       sessMgr,
 		catalog:          catalog.NewDefaultService(),
 		clients:          make(map[*ClientConnection]bool),
 		startTime:        time.Now(),
@@ -224,6 +233,10 @@ func (s *Server) HandleWS(w http.ResponseWriter, r *http.Request) {
 		}
 
 		log.Printf("[Gateway] Nhận action: %s", msg.Action)
+
+		if s.handleParentSessionAction(msg, emit) {
+			continue
+		}
 
 		switch msg.Action {
 		case "PING":

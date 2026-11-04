@@ -57,4 +57,21 @@ class GatewayEventMapperTest {
         assertIs<DomainGatewayEvent.AgentStateChanged>(event)
         assertEquals(AgentState.WAITING_APPROVAL, event.state)
     }
+
+    @Test
+    fun testMapWriterTransferred() {
+        val dto = GatewayEventDto(
+            type = "WRITER_TRANSFERRED",
+            sessionId = "ps_test",
+            newWriter = "claude-agent-1",
+            revision = 2L
+        )
+        val event = GatewayEventMapper.mapToDomain(dto)
+
+        assertNotNull(event)
+        assertIs<DomainGatewayEvent.WriterTransferred>(event)
+        assertEquals("ps_test", event.sessionId)
+        assertEquals("claude-agent-1", event.newWriter)
+        assertEquals(2L, event.revision)
+    }
 }

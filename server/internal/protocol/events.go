@@ -118,3 +118,23 @@ func ConversationHistoryEvent(engine string, conversationID string, messages any
 	}
 	return marshalEvent("CONVERSATION_HISTORY", payload)
 }
+
+func ParentSessionEvent(session any) []byte {
+	return marshalEvent("PARENT_SESSION_STATE", map[string]any{
+		"session": session,
+	})
+}
+
+func WriterTransferredEvent(sessionID string, newWriter string, revision int64) []byte {
+	return marshalEvent("WRITER_TRANSFERRED", map[string]any{
+		"sessionId": sessionID,
+		"newWriter": newWriter,
+		"revision":  revision,
+	})
+}
+
+func ConsultBranchEvent(branch any) []byte {
+	return marshalEvent("CONSULT_BRANCH_RESULT", map[string]any{
+		"branch": branch,
+	})
+}

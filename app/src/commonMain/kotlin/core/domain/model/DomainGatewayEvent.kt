@@ -18,5 +18,8 @@ sealed interface DomainGatewayEvent {
         val activeModel: String? = null,
         val tokenUsage: ConversationTokenUsage? = null
     ) : DomainGatewayEvent
+    data class ParentSessionState(val session: ParentSession) : DomainGatewayEvent
+    data class WriterTransferred(val sessionId: String, val newWriter: String, val revision: Long) : DomainGatewayEvent
+    data class ConsultBranchResult(val branch: ConsultBranchModel) : DomainGatewayEvent
     data object Pong : DomainGatewayEvent
 }

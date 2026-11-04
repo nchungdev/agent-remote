@@ -239,6 +239,56 @@ class KtorWebSocketClient(
         return sendAction(GatewayActionDto.ping())
     }
 
+    override suspend fun initParentSession(
+        parentSessionId: String?,
+        workspace: String?,
+        agentType: AgentType?,
+        model: String?
+    ): AppResult<Unit, DomainError> {
+        return sendAction(
+            GatewayActionDto.initParentSession(
+                parentSessionId = parentSessionId,
+                workspace = workspace,
+                agentType = agentType?.name,
+                model = model
+            )
+        )
+    }
+
+    override suspend fun transferWriter(
+        parentSessionId: String,
+        targetAgentId: String,
+        agentType: AgentType,
+        model: String?,
+        expectedRevision: Long
+    ): AppResult<Unit, DomainError> {
+        return sendAction(
+            GatewayActionDto.transferWriter(
+                parentSessionId = parentSessionId,
+                targetAgentId = targetAgentId,
+                agentType = agentType.name,
+                model = model,
+                expectedRevision = expectedRevision
+            )
+        )
+    }
+
+    override suspend fun consultBranch(
+        parentSessionId: String,
+        agentType: AgentType,
+        query: String,
+        model: String?
+    ): AppResult<Unit, DomainError> {
+        return sendAction(
+            GatewayActionDto.consultBranch(
+                parentSessionId = parentSessionId,
+                agentType = agentType.name,
+                query = query,
+                model = model
+            )
+        )
+    }
+
     override suspend fun disconnect() {
         connectionJob?.cancel()
         connectionJob = null

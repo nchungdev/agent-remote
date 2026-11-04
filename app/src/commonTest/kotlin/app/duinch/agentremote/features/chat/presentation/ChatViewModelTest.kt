@@ -2,6 +2,7 @@ package app.duinch.agentremote.features.chat.presentation
 
 import app.duinch.agentremote.core.data.cache.ConversationCache
 import app.duinch.agentremote.core.domain.model.AgentState
+import app.duinch.agentremote.core.domain.model.AgentType
 import app.duinch.agentremote.core.domain.model.ApprovalRequest
 import app.duinch.agentremote.core.domain.model.DomainGatewayEvent
 import app.duinch.agentremote.core.domain.repository.FakeAgentGatewayClient
@@ -136,6 +137,21 @@ class ChatViewModelTest {
 
         assertEquals(1, viewModel.uiState.value.queuedMessages.size)
         assertEquals("Prompt 3 queued", viewModel.uiState.value.queuedMessages.first().text)
+    }
+
+    @Test
+    fun testConsultMentionRouting() = runTest(testDispatcher) {
+        viewModel.processIntent(ChatIntent.Connect("127.0.0.1:8765"))
+        advanceUntilIdle()
+
+        viewModel.processIntent(ChatIntent.InputChanged("@claude:btw What do you think about this refactor?"))
+        viewModel.processIntent(ChatIntent.SendPrompt)
+        advanceUntilIdle()
+
+        assertEquals(1, fakeClient.consultRequests.size)
+        val request = fakeClient.consultRequests.first()
+        assertEquals(AgentType.CLAUDE_CODE, request.second)
+        assertEquals("What do you think about this refactor?", request.third)
     }
 
     @Test

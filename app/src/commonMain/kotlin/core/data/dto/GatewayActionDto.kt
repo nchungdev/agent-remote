@@ -8,6 +8,10 @@ data class GatewayActionDto(
     val agentType: String? = null,
     val model: String? = null,
     val conversationId: String? = null,
+    val parentSessionId: String? = null,
+    val targetAgentId: String? = null,
+    val expectedRevision: Long? = null,
+    val query: String? = null,
     val permissionMode: String? = null,
     val workspace: String? = null,
     val prompt: String? = null,
@@ -19,6 +23,47 @@ data class GatewayActionDto(
 ) {
     companion object {
         fun ping() = GatewayActionDto(action = "PING")
+
+        fun initParentSession(
+            parentSessionId: String? = null,
+            workspace: String? = null,
+            agentType: String? = null,
+            model: String? = null
+        ) = GatewayActionDto(
+            action = "PARENT_SESSION_INIT",
+            parentSessionId = parentSessionId,
+            workspace = workspace,
+            agentType = agentType,
+            model = model
+        )
+
+        fun transferWriter(
+            parentSessionId: String,
+            targetAgentId: String,
+            agentType: String,
+            model: String? = null,
+            expectedRevision: Long
+        ) = GatewayActionDto(
+            action = "TRANSFER_WRITER",
+            parentSessionId = parentSessionId,
+            targetAgentId = targetAgentId,
+            agentType = agentType,
+            model = model,
+            expectedRevision = expectedRevision
+        )
+
+        fun consultBranch(
+            parentSessionId: String,
+            agentType: String,
+            query: String,
+            model: String? = null
+        ) = GatewayActionDto(
+            action = "CONSULT_BRANCH",
+            parentSessionId = parentSessionId,
+            agentType = agentType,
+            query = query,
+            model = model
+        )
 
         fun selectAgent(type: String, model: String? = null) =
             GatewayActionDto(action = "SELECT_AGENT", agentType = type, model = model)

@@ -28,7 +28,11 @@ data class GatewayEventDto(
     val conversationId: String? = null,
     val messages: List<HistoryMessageDto>? = null,
     val activeModel: String? = null,
-    val tokenUsage: TokenUsageDto? = null
+    val tokenUsage: TokenUsageDto? = null,
+    val newWriter: String? = null,
+    val revision: Long? = null,
+    val session: JsonObject? = null,
+    val branch: JsonObject? = null
 )
 
 @Serializable

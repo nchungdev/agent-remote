@@ -72,9 +72,9 @@ Có thể làm song song: T2.3 với T2.4; T4.5 với T4.7 sau khi có T4.3. T4.
 
 ## M0 — Chuẩn bị
 
-- [ ] [T0.1 Đọc bối cảnh (S)](./parent-session-tasks/T0.1.md)
-- [ ] [T0.2 Chốt phạm vi pilot (S)](./parent-session-tasks/T0.2.md)
-- [ ] [T0.3 Chạy baseline (S)](./parent-session-tasks/T0.3.md)
+- [x] [T0.1 Đọc bối cảnh (S)](./parent-session-tasks/T0.1.md)
+- [x] [T0.2 Chốt phạm vi pilot (S)](./parent-session-tasks/T0.2.md)
+- [x] [T0.3 Chạy baseline (S)](./parent-session-tasks/T0.3.md)
 - [ ] [T0.4 Bắt mẫu output CLI 💰 (M)](./parent-session-tasks/T0.4.md)
 
 - [ ] [T0.5 Xác minh harness theo phiên bản (M)](./parent-session-tasks/T0.5.md)
@@ -113,41 +113,41 @@ Có thể làm song song: T2.3 với T2.4; T4.5 với T4.7 sau khi có T4.3. T4.
 
 ## M1 — Hợp đồng nội bộ Agent Remote
 
-- [ ] [T1.1 Định nghĩa hợp đồng lượt (S)](./parent-session-tasks/T1.1.md)
-- [ ] [T1.2 Dựng fake engine (M)](./parent-session-tasks/T1.2.md)
-- [ ] [T1.3 Tích hợp adapter đầu tiên (M)](./parent-session-tasks/T1.3.md)
+- [x] [T1.1 Định nghĩa hợp đồng lượt (S)](./parent-session-tasks/T1.1.md)
+- [x] [T1.2 Dựng fake engine (M)](./parent-session-tasks/T1.2.md)
+- [x] [T1.3 Tích hợp adapter đầu tiên (M)](./parent-session-tasks/T1.3.md)
 
 ---
 
 ## M2 — Session cha trong lõi
 
-- [ ] [T2.1 Mô hình dữ liệu (M)](./parent-session-tasks/T2.1.md)
-- [ ] [T2.2 Quyền ghi (M)](./parent-session-tasks/T2.2.md)
-- [ ] [T2.3 Dựng ngữ cảnh theo mục đích (L)](./parent-session-tasks/T2.3.md)
-- [ ] [T2.4 Đọc trạng thái git (M)](./parent-session-tasks/T2.4.md)
-- [ ] [T2.4a Định danh checkout và quyền thực thi (M)](./parent-session-tasks/T2.4a.md)
-- [ ] [T2.5 Chuyển lượt (M)](./parent-session-tasks/T2.5.md)
-- [ ] [T2.6 Hỏi ý kiến (L)](./parent-session-tasks/T2.6.md)
-- [ ] [T2.7 Giới hạn và hủy (S)](./parent-session-tasks/T2.7.md)
-- [ ] [T2.8 Duyệt quyền (M)](./parent-session-tasks/T2.8.md)
-- [ ] [T2.9 Nhập phiên CLI đã có (M)](./parent-session-tasks/T2.9.md)
-- [ ] [T2.10 Phát hiện lệch (S)](./parent-session-tasks/T2.10.md)
-- [ ] [T2.11 Usage và quota (M)](./parent-session-tasks/T2.11.md)
-- [ ] [T2.12 Tóm tắt cuốn chiếu (S)](./parent-session-tasks/T2.12.md)
+- [x] [T2.1 Mô hình dữ liệu (M)](./parent-session-tasks/T2.1.md)
+- [x] [T2.2 Quyền ghi (M)](./parent-session-tasks/T2.2.md)
+- [x] [T2.3 Dựng ngữ cảnh theo mục đích (L)](./parent-session-tasks/T2.3.md)
+- [x] [T2.4 Đọc trạng thái git (M)](./parent-session-tasks/T2.4.md)
+- [x] [T2.4a Định danh checkout và quyền thực thi (M)](./parent-session-tasks/T2.4a.md)
+- [x] [T2.5 Chuyển lượt (M)](./parent-session-tasks/T2.5.md)
+- [x] [T2.6 Hỏi ý kiến (L)](./parent-session-tasks/T2.6.md)
+- [x] [T2.7 Giới hạn và hủy (S)](./parent-session-tasks/T2.7.md)
+- [x] [T2.8 Duyệt quyền (M)](./parent-session-tasks/T2.8.md)
+- [x] [T2.9 Nhập phiên CLI đã có (M)](./parent-session-tasks/T2.9.md)
+- [x] [T2.10 Phát hiện lệch (S)](./parent-session-tasks/T2.10.md)
+- [x] [T2.11 Usage và quota (M)](./parent-session-tasks/T2.11.md)
+- [x] [T2.12 Tóm tắt cuốn chiếu (S)](./parent-session-tasks/T2.12.md)
 
 ---
 
 ## M3 — Server Agent Remote
 
-- [ ] [T3.1 Nối lõi nội bộ vào server (S)](./parent-session-tasks/T3.1.md)
-- [ ] [T3.2 Gom xử lý action (M)](./parent-session-tasks/T3.2.md)
-- [ ] [T3.3 Protocol session (M)](./parent-session-tasks/T3.3.md)
-- [ ] [T3.4 Khởi tạo lõi (M)](./parent-session-tasks/T3.4.md)
-- [ ] [T3.5 Phát event và nối lại (L)](./parent-session-tasks/T3.5.md)
-- [ ] [T3.6 Bảo mật (M)](./parent-session-tasks/T3.6.md)
+- [x] [T3.1 Nối lõi nội bộ vào server (S)](./parent-session-tasks/T3.1.md)
+- [x] [T3.2 Gom xử lý action (M)](./parent-session-tasks/T3.2.md)
+- [x] [T3.3 Protocol session (M)](./parent-session-tasks/T3.3.md)
+- [x] [T3.4 Khởi tạo lõi (M)](./parent-session-tasks/T3.4.md)
+- [x] [T3.5 Phát event và nối lại (L)](./parent-session-tasks/T3.5.md)
+- [x] [T3.6 Bảo mật (M)](./parent-session-tasks/T3.6.md)
 - [ ] [T3.6a Tạo và phục hồi worktree (M)](./parent-session-tasks/T3.6a.md)
 - [ ] [T3.6b Dọn worktree (M, sau pilot)](./parent-session-tasks/T3.6b.md)
-- [ ] [T3.7 Test tích hợp (M)](./parent-session-tasks/T3.7.md)
+- [x] [T3.7 Test tích hợp (M)](./parent-session-tasks/T3.7.md)
 
 ---
 
@@ -157,9 +157,9 @@ Có thể làm song song: T2.3 với T2.4; T4.5 với T4.7 sau khi có T4.3. T4.
 
 Thứ tự Domain → Data → State → UI. Mọi thứ nằm sau kiểm tra `features`; server cũ vẫn dùng luồng cũ.
 
-- [ ] [T4.1 Domain (S)](./parent-session-tasks/T4.1.md)
-- [ ] [T4.2 Data (M)](./parent-session-tasks/T4.2.md)
-- [ ] [T4.3 State (L)](./parent-session-tasks/T4.3.md)
+- [x] [T4.1 Domain (S)](./parent-session-tasks/T4.1.md)
+- [x] [T4.2 Data (M)](./parent-session-tasks/T4.2.md)
+- [x] [T4.3 State (L)](./parent-session-tasks/T4.3.md)
 - [ ] [T4.4 Timeline (M)](./parent-session-tasks/T4.4.md)
 - [ ] [T4.5 Writer và model (M)](./parent-session-tasks/T4.5.md)
 - [ ] [T4.6 Chọn agent bằng mention (M)](./parent-session-tasks/T4.6.md)
