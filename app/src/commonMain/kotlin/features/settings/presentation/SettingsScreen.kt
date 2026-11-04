@@ -1,9 +1,11 @@
 package app.duinch.agentremote.features.settings.presentation
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -47,6 +49,7 @@ import app.duinch.agentremote.features.settings.presentation.components.Settings
 import app.duinch.agentremote.features.settings.presentation.components.SettingsSwitchRow
 import app.duinch.agentremote.features.settings.presentation.components.UpdateCard
 import app.duinch.agentremote.features.settings.presentation.contract.SettingsIntent
+import app.duinch.agentremote.features.settings.presentation.contract.SettingsUiState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -78,173 +81,284 @@ fun SettingsScreen(
         modifier = modifier.fillMaxSize(),
         containerColor = Color(0xFF141416),
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Cài đặt",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 17.sp
-                        ),
-                        color = Color(0xFFF4F4F5)
-                    )
-                },
-                navigationIcon = {
-                    if (onBack != null) {
-                        IconButton(onClick = onBack) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                                contentDescription = "Quay lại",
-                                tint = Color(0xFFE4E4E7)
-                            )
+            Column(modifier = Modifier.fillMaxWidth().background(Color(0xFF141416))) {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = "Cài đặt",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 17.sp
+                            ),
+                            color = Color(0xFFF4F4F5)
+                        )
+                    },
+                    navigationIcon = {
+                        if (onBack != null) {
+                            IconButton(onClick = onBack) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                                    contentDescription = "Quay lại",
+                                    tint = Color(0xFFE4E4E7)
+                                )
+                            }
                         }
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF141416))
-            )
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF141416))
+                )
+                HorizontalDivider(color = Color(0xFF22222A), thickness = 0.5.dp)
+            }
         }
     ) { paddingValues ->
-        Box(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
+                .background(Color(0xFF141416))
                 .padding(paddingValues),
             contentAlignment = Alignment.TopCenter
         ) {
+            val isMultiColumn = maxWidth >= 768.dp
+            val contentMaxWidth = if (isMultiColumn) 1060.dp else 580.dp
+
             Column(
                 modifier = Modifier
-                    .widthIn(max = 580.dp)
+                    .widthIn(max = contentMaxWidth)
+                    .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
-            // Group 1: Đường truyền & Máy chủ
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SectionTitle("ĐƯỜNG TRUYỀN & MÁY CHỦ")
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = Color(0xFF1E1E22),
-                    border = BorderStroke(1.dp, Color(0xFF2E2E34)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column {
-                        SettingsNavigationRow(
-                            icon = Icons.Outlined.Hub,
-                            title = "Quản lý máy chủ kết nối",
-                            subtitle = activeHostLabel,
+                if (isMultiColumn) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(20.dp)
+                    ) {
+                        // Cột trái: Đường truyền & Coding engine
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(20.dp)
+                        ) {
+                            NetworkAndHostSection(
+                                activeHostLabel = activeHostLabel,
+                                statusDotColor = statusDotColor,
+                                isConnected = isConnected,
+                                autoReconnect = state.autoReconnect,
+                                onOpenConnect = onOpenConnect,
+                                onToggleAutoReconnect = {
+                                    viewModel.processIntent(SettingsIntent.ToggleAutoReconnect(it))
+                                }
+                            )
+                            DefaultEngineSection(
+                                selectedAgent = currentAgent ?: state.defaultAgent,
+                                onOpenEngineSelector = onOpenEngineSelector,
+                                onSelectAgent = { agent ->
+                                    viewModel.processIntent(SettingsIntent.SelectDefaultAgent(agent))
+                                    onSelectEngine?.invoke(agent)
+                                }
+                            )
+                        }
+
+                        // Cột phải: Thông báo duyệt & Cập nhật
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(20.dp)
+                        ) {
+                            NotificationsSection(
+                                notifyAgentApproval = state.notifyAgentApproval,
+                                notifyConnectionChange = state.notifyConnectionChange,
+                                onToggleApproval = {
+                                    viewModel.processIntent(SettingsIntent.ToggleNotifyAgentApproval(it))
+                                },
+                                onToggleConnectionChange = {
+                                    viewModel.processIntent(SettingsIntent.ToggleNotifyConnectionChange(it))
+                                }
+                            )
+                            AppInfoSection(state = state, viewModel = viewModel)
+                        }
+                    }
+                } else {
+                    // Màn hình hẹp (mobile hoặc cửa sổ nhỏ): Căn giữa 1 cột
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(20.dp)
+                    ) {
+                        NetworkAndHostSection(
+                            activeHostLabel = activeHostLabel,
                             statusDotColor = statusDotColor,
-                            badgeText = if (isConnected) "ĐÃ KẾT NỐI" else null,
-                            badgeColor = Color(0xFF22C55E),
-                            onClick = { onOpenConnect?.invoke() }
-                        )
-
-                        HorizontalDivider(color = Color(0xFF2E2E34), thickness = 0.5.dp)
-
-                        SettingsSwitchRow(
-                            icon = Icons.Outlined.Sync,
-                            title = "Tự động kết nối lại",
-                            subtitle = "Khôi phục phiên làm việc ngay khi mạng Wi-Fi hoặc P2P ổn định trở lại",
-                            checked = state.autoReconnect,
-                            onCheckedChange = {
+                            isConnected = isConnected,
+                            autoReconnect = state.autoReconnect,
+                            onOpenConnect = onOpenConnect,
+                            onToggleAutoReconnect = {
                                 viewModel.processIntent(SettingsIntent.ToggleAutoReconnect(it))
                             }
                         )
-                    }
-                }
-            }
-
-            // Group 2: AI Coding Engine
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    SectionTitle("CODING ENGINE MẶC ĐỊNH", noPadding = true)
-                    if (onOpenEngineSelector != null) {
-                        Text(
-                            text = "Xem chi tiết →",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color(0xFFCC785C),
-                                fontSize = 12.sp
-                            ),
-                            modifier = Modifier.clickable { onOpenEngineSelector() }
-                        )
-                    }
-                }
-
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = Color(0xFF1E1E22),
-                    border = BorderStroke(1.dp, Color(0xFF2E2E34)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        EngineBentoGrid(
+                        DefaultEngineSection(
                             selectedAgent = currentAgent ?: state.defaultAgent,
+                            onOpenEngineSelector = onOpenEngineSelector,
                             onSelectAgent = { agent ->
                                 viewModel.processIntent(SettingsIntent.SelectDefaultAgent(agent))
                                 onSelectEngine?.invoke(agent)
                             }
                         )
-                    }
-                }
-            }
-
-            // Group 3: Thông báo & Phê duyệt
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SectionTitle("THÔNG BÁO & PHÊ DUYỆT")
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = Color(0xFF1E1E22),
-                    border = BorderStroke(1.dp, Color(0xFF2E2E34)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column {
-                        SettingsSwitchRow(
-                            icon = Icons.Outlined.VerifiedUser,
-                            title = "Cảnh báo duyệt quyền thực thi",
-                            subtitle = "Hiển thị thông báo tức thì khi Agent chờ phê duyệt chạy lệnh hoặc sửa tệp",
-                            checked = state.notifyAgentApproval,
-                            onCheckedChange = {
+                        NotificationsSection(
+                            notifyAgentApproval = state.notifyAgentApproval,
+                            notifyConnectionChange = state.notifyConnectionChange,
+                            onToggleApproval = {
                                 viewModel.processIntent(SettingsIntent.ToggleNotifyAgentApproval(it))
-                            }
-                        )
-
-                        HorizontalDivider(color = Color(0xFF2E2E34), thickness = 0.5.dp)
-
-                        SettingsSwitchRow(
-                            icon = Icons.Outlined.NotificationsActive,
-                            title = "Thông báo trạng thái kết nối",
-                            subtitle = "Báo khi máy chủ kết nối thành công hoặc bị ngắt đường truyền đột ngột",
-                            checked = state.notifyConnectionChange,
-                            onCheckedChange = {
+                            },
+                            onToggleConnectionChange = {
                                 viewModel.processIntent(SettingsIntent.ToggleNotifyConnectionChange(it))
                             }
                         )
+                        AppInfoSection(state = state, viewModel = viewModel)
                     }
                 }
-            }
 
-            // Group 4: Thông tin & Cập nhật ứng dụng
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SectionTitle("THÔNG TIN & CẬP NHẬT")
-                UpdateCard(
-                    currentVersion = state.currentVersionName,
-                    currentCode = state.currentVersionCode,
-                    repoName = "${state.githubRepoOwner}/${state.githubRepoName}",
-                    status = state.updateStatus,
-                    onCheckUpdate = { viewModel.processIntent(SettingsIntent.CheckUpdate) },
-                    onDownloadAndInstall = { viewModel.processIntent(SettingsIntent.DownloadAndInstallUpdate) }
-                )
+                Spacer(modifier = Modifier.height(24.dp))
             }
-
-            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
+
+@Composable
+private fun NetworkAndHostSection(
+    activeHostLabel: String,
+    statusDotColor: Color,
+    isConnected: Boolean,
+    autoReconnect: Boolean,
+    onOpenConnect: (() -> Unit)?,
+    onToggleAutoReconnect: (Boolean) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionTitle("ĐƯỜNG TRUYỀN & MÁY CHỦ")
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = Color(0xFF1E1E22),
+            border = BorderStroke(1.dp, Color(0xFF2E2E34)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column {
+                SettingsNavigationRow(
+                    icon = Icons.Outlined.Hub,
+                    title = "Quản lý máy chủ kết nối",
+                    subtitle = activeHostLabel,
+                    statusDotColor = statusDotColor,
+                    badgeText = if (isConnected) "ĐÃ KẾT NỐI" else null,
+                    badgeColor = Color(0xFF22C55E),
+                    onClick = { onOpenConnect?.invoke() }
+                )
+
+                HorizontalDivider(color = Color(0xFF2E2E34), thickness = 0.5.dp)
+
+                SettingsSwitchRow(
+                    icon = Icons.Outlined.Sync,
+                    title = "Tự động kết nối lại",
+                    subtitle = "Khôi phục phiên làm việc ngay khi mạng Wi-Fi hoặc P2P ổn định trở lại",
+                    checked = autoReconnect,
+                    onCheckedChange = onToggleAutoReconnect
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DefaultEngineSection(
+    selectedAgent: AgentType,
+    onOpenEngineSelector: (() -> Unit)?,
+    onSelectAgent: (AgentType) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            SectionTitle("CODING ENGINE MẶC ĐỊNH", noPadding = true)
+            if (onOpenEngineSelector != null) {
+                Text(
+                    text = "Xem chi tiết →",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFFCC785C),
+                        fontSize = 12.sp
+                    ),
+                    modifier = Modifier.clickable { onOpenEngineSelector() }
+                )
+            }
+        }
+
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = Color(0xFF1E1E22),
+            border = BorderStroke(1.dp, Color(0xFF2E2E34)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                EngineBentoGrid(
+                    selectedAgent = selectedAgent,
+                    onSelectAgent = onSelectAgent
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun NotificationsSection(
+    notifyAgentApproval: Boolean,
+    notifyConnectionChange: Boolean,
+    onToggleApproval: (Boolean) -> Unit,
+    onToggleConnectionChange: (Boolean) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionTitle("THÔNG BÁO & PHÊ DUYỆT")
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = Color(0xFF1E1E22),
+            border = BorderStroke(1.dp, Color(0xFF2E2E34)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column {
+                SettingsSwitchRow(
+                    icon = Icons.Outlined.VerifiedUser,
+                    title = "Cảnh báo duyệt quyền thực thi",
+                    subtitle = "Hiển thị thông báo tức thì khi Agent chờ phê duyệt chạy lệnh hoặc sửa tệp",
+                    checked = notifyAgentApproval,
+                    onCheckedChange = onToggleApproval
+                )
+
+                HorizontalDivider(color = Color(0xFF2E2E34), thickness = 0.5.dp)
+
+                SettingsSwitchRow(
+                    icon = Icons.Outlined.NotificationsActive,
+                    title = "Thông báo trạng thái kết nối",
+                    subtitle = "Báo khi máy chủ kết nối thành công hoặc bị ngắt đường truyền đột ngột",
+                    checked = notifyConnectionChange,
+                    onCheckedChange = onToggleConnectionChange
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AppInfoSection(
+    state: SettingsUiState,
+    viewModel: SettingsViewModel
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionTitle("THÔNG TIN & CẬP NHẬT")
+        UpdateCard(
+            currentVersion = state.currentVersionName,
+            currentCode = state.currentVersionCode,
+            repoName = "${state.githubRepoOwner}/${state.githubRepoName}",
+            status = state.updateStatus,
+            onCheckUpdate = { viewModel.processIntent(SettingsIntent.CheckUpdate) },
+            onDownloadAndInstall = { viewModel.processIntent(SettingsIntent.DownloadAndInstallUpdate) }
+        )
+    }
 }
 
 @Composable

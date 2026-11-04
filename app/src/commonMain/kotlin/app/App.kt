@@ -249,8 +249,6 @@ fun App() {
                         .background(Color(0xFF121215)),
                     contentAlignment = Alignment.TopCenter
                 ) {
-                    val contentMaxWidth = if (isCompactScreen) Modifier.fillMaxSize() else Modifier.widthIn(max = 720.dp).fillMaxSize()
-
                     when (currentScreen) {
                         AppScreen.CONNECT -> {
                             ConnectScreen(
@@ -344,7 +342,7 @@ fun App() {
                                 currentAgent = chatState.selectedAgent,
                                 currentHost = chatState.gatewayUrl,
                                 connectionStatus = chatState.connectionStatus,
-                                modifier = contentMaxWidth
+                                modifier = Modifier.fillMaxSize()
                             )
                         }
                     }

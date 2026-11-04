@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -56,6 +57,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.duinch.agentremote.core.domain.model.ConnectionStatus
+import app.duinch.agentremote.core.domain.model.MessageRole
 import app.duinch.agentremote.core.presentation.components.ArcReactorEmblem
 import app.duinch.agentremote.core.presentation.util.isKeyboardVisible
 import app.duinch.agentremote.core.presentation.util.rememberPlatformFilePicker
@@ -245,19 +247,33 @@ fun ChatScreen(
                     modifier = Modifier.fillMaxSize()
                 )
             } else {
+                @OptIn(ExperimentalFoundationApi::class)
                 LazyColumn(
                     state = listState,
                     modifier = Modifier
                         .widthIn(max = 800.dp)
                         .fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    itemsIndexed(
-                        items = state.messages,
-                        key = { index, msg -> "${msg.id}_$index" }
-                    ) { _, message ->
-                        ChatMessageBubble(message = message)
+                    state.messages.forEachIndexed { index, message ->
+                        if (message.role == MessageRole.USER) {
+                            stickyHeader(key = "user_${message.id}_$index") {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(Color(0xFF141416))
+                                        .padding(vertical = 4.dp),
+                                    contentAlignment = Alignment.CenterEnd
+                                ) {
+                                    ChatMessageBubble(message = message)
+                                }
+                            }
+                        } else {
+                            item(key = "asst_${message.id}_$index") {
+                                ChatMessageBubble(message = message)
+                            }
+                        }
                     }
                 }
             }

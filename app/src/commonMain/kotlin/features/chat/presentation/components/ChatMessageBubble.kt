@@ -50,7 +50,7 @@ fun ChatMessageBubble(
                 shape = RoundedCornerShape(20.dp, 20.dp, 4.dp, 20.dp),
                 color = Color(0xFF282422),
                 border = BorderStroke(1.dp, Color(0xFF443933)),
-                modifier = Modifier.widthIn(max = 335.dp)
+                modifier = Modifier.widthIn(max = 560.dp)
             ) {
                 Text(
                     text = message.content,

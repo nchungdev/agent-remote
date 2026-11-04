@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -27,6 +28,7 @@ import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Terminal
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -106,51 +108,59 @@ fun EngineSelectorScreen(
         modifier = modifier.fillMaxSize(),
         containerColor = Color(0xFF141416),
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = "Agent Remote",
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 17.sp
-                            ),
-                            color = Color(0xFFF4F4F5),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = "Chọn Coding Engine",
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.5.sp),
-                            color = Color(0xFFA1A1AA),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = onOpenSettings) {
-                        Icon(
-                            imageVector = Icons.Outlined.Settings,
-                            contentDescription = "Cài đặt",
-                            tint = Color(0xFFE4E4E7),
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF141416))
-            )
+            Column(modifier = Modifier.fillMaxWidth().background(Color(0xFF141416))) {
+                TopAppBar(
+                    title = {
+                        Column {
+                            Text(
+                                text = "Agent Remote",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 17.sp
+                                ),
+                                color = Color(0xFFF4F4F5),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = "Chọn Coding Engine",
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.5.sp),
+                                color = Color(0xFFA1A1AA),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = onOpenSettings) {
+                            Icon(
+                                imageVector = Icons.Outlined.Settings,
+                                contentDescription = "Cài đặt",
+                                tint = Color(0xFFE4E4E7),
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF141416))
+                )
+                HorizontalDivider(color = Color(0xFF22222A), thickness = 0.5.dp)
+            }
         }
     ) { paddingValues ->
-        Box(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
+                .background(Color(0xFF141416))
                 .padding(paddingValues),
             contentAlignment = Alignment.TopCenter
         ) {
+            val isMultiColumn = maxWidth >= 840.dp
+            val contentMaxWidth = if (isMultiColumn) 1040.dp else 580.dp
+
             Column(
                 modifier = Modifier
-                    .widthIn(max = 580.dp)
+                    .widthIn(max = contentMaxWidth)
+                    .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 20.dp, vertical = 12.dp)
             ) {
@@ -173,118 +183,160 @@ fun EngineSelectorScreen(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                availableEngines.forEach { engine ->
-                    val isSelected = engine.type == currentAgent
-
-                    Surface(
-                        shape = RoundedCornerShape(18.dp),
-                        color = if (isSelected) Color(0xFF1E2024) else Color(0xFF1C1C20),
-                        border = BorderStroke(
-                            width = if (isSelected) 1.5.dp else 1.dp,
-                            color = if (isSelected) engine.accentColor else Color(0xFF2E2E34)
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onSelectEngine(engine.type) }
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            // Icon bubble
-                            Box(
-                                modifier = Modifier
-                                    .size(44.dp)
-                                    .clip(CircleShape)
-                                    .background(engine.accentColor.copy(alpha = 0.15f)),
-                                contentAlignment = Alignment.Center
+                if (isMultiColumn) {
+                    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                        availableEngines.chunked(2).forEach { pair ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(14.dp)
                             ) {
-                                Icon(
-                                    imageVector = engine.icon,
-                                    contentDescription = engine.title,
-                                    tint = engine.accentColor,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.width(14.dp))
-
-                            Column(modifier = Modifier.weight(1f)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = engine.title,
-                                        style = MaterialTheme.typography.titleMedium.copy(
-                                            fontWeight = FontWeight.SemiBold,
-                                            fontSize = 16.sp
-                                        ),
-                                        color = Color(0xFFF4F4F5)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Surface(
-                                        shape = RoundedCornerShape(6.dp),
-                                        color = engine.accentColor.copy(alpha = 0.2f)
-                                    ) {
-                                        Text(
-                                            text = engine.badge,
-                                            style = MaterialTheme.typography.labelSmall.copy(
-                                                fontFamily = FontFamily.Monospace,
-                                                fontSize = 9.sp,
-                                                fontWeight = FontWeight.Bold
-                                            ),
-                                            color = engine.accentColor,
-                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                        )
+                                pair.forEach { engine ->
+                                    val isSelected = engine.type == currentAgent
+                                    val engineModels = catalogs[engine.type]?.models.orEmpty()
+                                    val modelsText = if (engineModels.isNotEmpty()) {
+                                        "Models: " + engineModels.joinToString(", ") { it.displayName }
+                                    } else {
+                                        "Mô hình: Tự động tải từ máy Mac khi kết nối"
                                     }
+
+                                    EngineCardItem(
+                                        engine = engine,
+                                        isSelected = isSelected,
+                                        modelsText = modelsText,
+                                        onSelect = { onSelectEngine(engine.type) },
+                                        modifier = Modifier.weight(1f)
+                                    )
                                 }
-
-                                Spacer(modifier = Modifier.height(4.dp))
-
-                                Text(
-                                    text = engine.subtitle,
-                                    style = MaterialTheme.typography.bodySmall.copy(
-                                        fontSize = 12.sp,
-                                        lineHeight = 16.sp
-                                    ),
-                                    color = Color(0xFF94A3B8)
-                                )
-
-                                Spacer(modifier = Modifier.height(6.dp))
-
-                                val engineModels = catalogs[engine.type]?.models.orEmpty()
-                                val modelsText = if (engineModels.isNotEmpty()) {
-                                    "Models: " + engineModels.joinToString(", ") { it.displayName }
-                                } else {
-                                    "Mô hình: Tự động tải từ máy Mac khi kết nối"
-                                }
-
-                                Text(
-                                    text = modelsText,
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        fontSize = 10.5.sp,
-                                        fontFamily = FontFamily.Monospace
-                                    ),
-                                    color = engine.accentColor.copy(alpha = 0.85f),
-                                    maxLines = 1,
-                                    softWrap = false
-                                )
+                            }
+                        }
+                    }
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                        availableEngines.forEach { engine ->
+                            val isSelected = engine.type == currentAgent
+                            val engineModels = catalogs[engine.type]?.models.orEmpty()
+                            val modelsText = if (engineModels.isNotEmpty()) {
+                                "Models: " + engineModels.joinToString(", ") { it.displayName }
+                            } else {
+                                "Mô hình: Tự động tải từ máy Mac khi kết nối"
                             }
 
-                            Spacer(modifier = Modifier.width(8.dp))
-
-                            Icon(
-                                imageVector = Icons.Outlined.ChevronRight,
-                                contentDescription = null,
-                                tint = if (isSelected) engine.accentColor else Color(0xFF52525B),
-                                modifier = Modifier.size(20.dp)
+                            EngineCardItem(
+                                engine = engine,
+                                isSelected = isSelected,
+                                modelsText = modelsText,
+                                onSelect = { onSelectEngine(engine.type) },
+                                modifier = Modifier.fillMaxWidth()
                             )
                         }
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(30.dp))
+                Spacer(modifier = Modifier.height(30.dp))
+            }
         }
     }
 }
+
+@Composable
+private fun EngineCardItem(
+    engine: EngineItem,
+    isSelected: Boolean,
+    modelsText: String,
+    onSelect: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        shape = RoundedCornerShape(18.dp),
+        color = if (isSelected) Color(0xFF1E2024) else Color(0xFF1C1C20),
+        border = BorderStroke(
+            width = if (isSelected) 1.5.dp else 1.dp,
+            color = if (isSelected) engine.accentColor else Color(0xFF2E2E34)
+        ),
+        modifier = modifier.clickable { onSelect() }
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(engine.accentColor.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = engine.icon,
+                    contentDescription = engine.title,
+                    tint = engine.accentColor,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(14.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = engine.title,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 16.sp
+                        ),
+                        color = Color(0xFFF4F4F5)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = engine.accentColor.copy(alpha = 0.2f)
+                    ) {
+                        Text(
+                            text = engine.badge,
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold
+                            ),
+                            color = engine.accentColor,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = engine.subtitle,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontSize = 12.sp,
+                        lineHeight = 16.sp
+                    ),
+                    color = Color(0xFF94A3B8)
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
+                    text = modelsText,
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontSize = 10.5.sp,
+                        fontFamily = FontFamily.Monospace
+                    ),
+                    color = engine.accentColor.copy(alpha = 0.85f),
+                    maxLines = 1,
+                    softWrap = false
+                )
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Icon(
+                imageVector = Icons.Outlined.ChevronRight,
+                contentDescription = null,
+                tint = if (isSelected) engine.accentColor else Color(0xFF52525B),
+                modifier = Modifier.size(20.dp)
+            )
+        }
+    }
 }
