@@ -67,6 +67,7 @@ object GatewayEventMapper {
                         id = m.id,
                         role = if (m.role == "user") MessageRole.USER else MessageRole.ASSISTANT,
                         content = m.content,
+                        thinking = m.thinking,
                         timestamp = m.timestampMs ?: 0L
                     )
                 }

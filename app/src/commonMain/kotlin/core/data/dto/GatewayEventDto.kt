@@ -34,5 +34,6 @@ data class HistoryMessageDto(
     val id: String,
     val role: String,
     val content: String,
+    val thinking: String? = null,
     val timestampMs: Long? = null
 )

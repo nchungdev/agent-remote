@@ -16,6 +16,7 @@ type HistoryMessage struct {
 	ID          string `json:"id"`
 	Role        string `json:"role"` // "user" or "assistant"
 	Content     string `json:"content"`
+	Thinking    string `json:"thinking,omitempty"`
 	TimestampMs int64  `json:"timestampMs,omitempty"`
 }
 
@@ -62,6 +63,7 @@ func (s *Service) loadAntigravityHistory(ctx context.Context, conversationID str
 		Type      string `json:"type"`
 		Content   string `json:"content"`
 		CreatedAt string `json:"created_at"`
+		Thinking  string `json:"thinking"`
 		ToolCalls []struct {
 			Name string         `json:"name"`
 			Args map[string]any `json:"args"`
@@ -111,6 +113,7 @@ func (s *Service) loadAntigravityHistory(ctx context.Context, conversationID str
 			if content == "None" {
 				content = ""
 			}
+			thinking := strings.TrimSpace(entry.Thinking)
 			if content == "" && len(entry.ToolCalls) > 0 {
 				var summaries []string
 				for _, tc := range entry.ToolCalls {
@@ -130,17 +133,25 @@ func (s *Service) loadAntigravityHistory(ctx context.Context, conversationID str
 					content = "🔧 *Thực thi công cụ:*\n" + strings.Join(summaries, "\n")
 				}
 			}
-			if content != "" {
+			if content != "" || thinking != "" {
 				if len(allMessages) > 0 && allMessages[len(allMessages)-1].Role == "assistant" &&
 					strings.HasPrefix(content, "🔧 *Thực thi công cụ:*") &&
 					strings.HasPrefix(allMessages[len(allMessages)-1].Content, "🔧 *Thực thi công cụ:*") {
 					allMessages[len(allMessages)-1].Content += "\n" + strings.TrimPrefix(content, "🔧 *Thực thi công cụ:*\n")
 					allMessages[len(allMessages)-1].TimestampMs = ts
+					if thinking != "" {
+						if allMessages[len(allMessages)-1].Thinking != "" {
+							allMessages[len(allMessages)-1].Thinking += "\n\n" + thinking
+						} else {
+							allMessages[len(allMessages)-1].Thinking = thinking
+						}
+					}
 				} else {
 					allMessages = append(allMessages, HistoryMessage{
 						ID:          fmt.Sprintf("asst-%d", entry.StepIndex),
 						Role:        "assistant",
 						Content:     content,
+						Thinking:    thinking,
 						TimestampMs: ts,
 					})
 				}

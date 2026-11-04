@@ -55,12 +55,12 @@ fun ChatMessageBubble(
                 Text(
                     text = message.content,
                     style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = 15.5.sp,
-                        lineHeight = 23.sp,
-                        letterSpacing = 0.15.sp
+                        fontSize = 13.5.sp,
+                        lineHeight = 20.sp,
+                        letterSpacing = 0.1.sp
                     ),
                     color = Color(0xFFF5F4F0),
-                    modifier = Modifier.padding(horizontal = 15.dp, vertical = 11.dp)
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp)
                 )
             }
         } else {

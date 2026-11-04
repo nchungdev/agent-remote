@@ -61,10 +61,10 @@ fun ExecutionTraceView(
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         if (!thinking.isNullOrBlank()) {
-            TraceThinkingItem(thought = thinking, isStreaming = isStreaming)
+            ThinkingCard(thought = thinking, isStreaming = isStreaming)
         }
 
         toolCalls.forEach { tool ->
@@ -82,77 +82,7 @@ private fun TraceThinkingItem(
     thought: String,
     isStreaming: Boolean
 ) {
-    // Collapsed by default — flat, borderless inline row like Antigravity / Claude / Codex
-    var isExpanded by remember { mutableStateOf(false) }
-
-    val transition = rememberInfiniteTransition()
-    val pulseAlpha by transition.animateFloat(
-        initialValue = 0.5f,
-        targetValue = 1.0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(800),
-            repeatMode = RepeatMode.Reverse
-        )
-    )
-
-    val label = if (isStreaming) "Đang suy nghĩ..." else "Suy nghĩ"
-
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier
-                .clickable { isExpanded = !isExpanded }
-                .padding(vertical = 3.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium
-                ),
-                color = Color(0xFF8E8E93),
-                modifier = if (isStreaming) Modifier.alpha(pulseAlpha) else Modifier
-            )
-            Spacer(modifier = Modifier.width(3.dp))
-            Icon(
-                imageVector = if (isExpanded) Icons.Outlined.ExpandMore else Icons.Outlined.ChevronRight,
-                contentDescription = if (isExpanded) "Thu gọn" else "Mở rộng",
-                tint = Color(0xFF71717A),
-                modifier = Modifier.size(15.dp)
-            )
-        }
-
-        AnimatedVisibility(
-            visible = isExpanded,
-            enter = expandVertically(),
-            exit = shrinkVertically()
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 4.dp, top = 4.dp, bottom = 6.dp)
-                    .height(IntrinsicSize.Min)
-            ) {
-                // Thin 1dp vertical timeline line (no surrounding box)
-                Box(
-                    modifier = Modifier
-                        .width(1.5.dp)
-                        .fillMaxHeight()
-                        .background(Color(0xFF2E2E34))
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    text = thought.trim(),
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        fontSize = 13.5.sp,
-                        lineHeight = 20.sp
-                    ),
-                    color = Color(0xFF8E8E93),
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
-    }
+    ThinkingCard(thought = thought, isStreaming = isStreaming)
 }
 
 @Composable
