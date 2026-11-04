@@ -35,9 +35,22 @@ import app.duinch.agentremote.core.domain.model.MessageRole
 @Composable
 fun ChatMessageBubble(
     message: ChatMessage,
+    onSendConsultToWriter: ((String) -> Unit)? = null,
+    onFollowUpConsult: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val isUser = message.role == MessageRole.USER
+    val isConsult = message.content.startsWith("🔍 Đang hỏi ý kiến")
+
+    if (isConsult && !isUser) {
+        ConsultCard(
+            message = message,
+            onSendToWriter = { onSendConsultToWriter?.invoke(it) },
+            onFollowUp = { onFollowUpConsult?.invoke(it) },
+            modifier = modifier.padding(horizontal = 14.dp)
+        )
+        return
+    }
 
     Row(
         modifier = modifier

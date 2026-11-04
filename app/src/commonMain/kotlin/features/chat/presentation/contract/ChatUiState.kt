@@ -43,6 +43,11 @@ data class ChatUiState(
     val inputText: String = "",
     val gatewayUrl: String = "",
     val isConnecting: Boolean = false,
+    val isNewSessionDialogOpen: Boolean = false,
+    val activeBranch: String? = "main",
+    val activeWorktree: String? = null,
+    val isSwitchingWriter: Boolean = false,
+    val switchWriterConfirmTarget: AgentType? = null,
     val errorMessage: String? = null
 ) {
     val canSendPrompt: Boolean

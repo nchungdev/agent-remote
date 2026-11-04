@@ -69,7 +69,9 @@ import app.duinch.agentremote.features.chat.presentation.components.ApprovalCard
 import app.duinch.agentremote.features.chat.presentation.components.ChatInputBar
 import app.duinch.agentremote.features.chat.presentation.components.ChatMessageBubble
 import app.duinch.agentremote.features.chat.presentation.components.CompactTokenGaugeBadge
+import app.duinch.agentremote.features.chat.presentation.components.NewParentSessionDialog
 import app.duinch.agentremote.features.chat.presentation.components.TokenUsageDetailDialog
+import app.duinch.agentremote.features.chat.presentation.components.WriterHeaderMenu
 import app.duinch.agentremote.features.chat.presentation.contract.ChatEffect
 import app.duinch.agentremote.features.chat.presentation.contract.ChatIntent
 
@@ -146,18 +148,16 @@ fun ChatScreen(
                             Spacer(modifier = Modifier.width(7.dp))
                             ConnectionDot(status = state.connectionStatus)
                             Spacer(modifier = Modifier.width(6.dp))
-                            Surface(
-                                shape = RoundedCornerShape(4.dp),
-                                color = Color(0xFF23242A),
-                                border = BorderStroke(0.5.dp, Color(0xFF383A46))
-                            ) {
-                                Text(
-                                    text = "Đang làm • ${state.selectedAgent.badge}",
-                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, fontWeight = FontWeight.Bold),
-                                    color = Color(0xFFD4785A),
-                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
-                                )
-                            }
+                            WriterHeaderMenu(
+                                currentAgent = state.selectedAgent,
+                                agentState = state.agentState,
+                                activeBranch = state.activeBranch,
+                                workspaceLabel = workspaceLabel,
+                                switchWriterConfirmTarget = state.switchWriterConfirmTarget,
+                                onSwitchWriter = { target -> viewModel.processIntent(ChatIntent.SwitchWriter(target)) },
+                                onConfirmSwitch = { target, stopCurrent -> viewModel.processIntent(ChatIntent.ConfirmSwitchWriter(target, stopCurrent)) },
+                                onDismissConfirm = { viewModel.processIntent(ChatIntent.DismissSwitchWriterConfirm) }
+                            )
                         }
                         val subLabel = if (workspaceLabel != null) {
                             "${state.selectedAgent.displayName} • $workspaceLabel"
@@ -184,7 +184,7 @@ fun ChatScreen(
                 },
                 actions = {
                     IconButton(
-                        onClick = { viewModel.processIntent(ChatIntent.NewConversation) }
+                        onClick = { viewModel.processIntent(ChatIntent.OpenNewSessionDialog) }
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Add,
@@ -300,7 +300,15 @@ fun ChatScreen(
                             }
                         } else {
                             item(key = "asst_${message.id}_$index") {
-                                ChatMessageBubble(message = message)
+                                ChatMessageBubble(
+                                    message = message,
+                                    onSendConsultToWriter = { consultResult ->
+                                        viewModel.processIntent(ChatIntent.InputChanged("Dựa trên ý kiến tư vấn:\n$consultResult\n\nHãy xử lý tiếp."))
+                                    },
+                                    onFollowUpConsult = { _ ->
+                                        viewModel.processIntent(ChatIntent.InputChanged("@${state.selectedAgent.badge.lowercase()}:btw "))
+                                    }
+                                )
                             }
                         }
                     }
@@ -321,6 +329,17 @@ fun ChatScreen(
             modelName = currentModelName,
             tokenUsage = state.tokenUsage ?: ConversationTokenUsage(),
             onDismiss = { showTokenDialog = false }
+        )
+    }
+
+    if (state.isNewSessionDialogOpen) {
+        NewParentSessionDialog(
+            initialWorkspace = state.activeWorkspace,
+            initialAgent = state.selectedAgent,
+            onDismiss = { viewModel.processIntent(ChatIntent.DismissNewSessionDialog) },
+            onCreate = { title, useWorktree, baseBranch, agent ->
+                viewModel.processIntent(ChatIntent.CreateNewSession(title, useWorktree, baseBranch, agent))
+            }
         )
     }
 }

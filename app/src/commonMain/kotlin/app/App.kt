@@ -203,7 +203,21 @@ fun App() {
                         if (!isExpandedTablet) onClose()
                     },
                     onNewConversation = {
-                        chatViewModel.processIntent(ChatIntent.NewConversation)
+                        chatViewModel.processIntent(ChatIntent.OpenNewSessionDialog)
+                        currentScreen = AppScreen.CHAT
+                        if (!isExpandedTablet) onClose()
+                    },
+                    onSelectAgentChild = { agent ->
+                        chatViewModel.processIntent(ChatIntent.SwitchWriter(agent))
+                    },
+                    onImportCliSession = { agent, nativeId ->
+                        chatViewModel.processIntent(
+                            ChatIntent.SelectConversation(
+                                conversationId = nativeId,
+                                title = "CLI: $nativeId",
+                                agentType = agent
+                            )
+                        )
                         currentScreen = AppScreen.CHAT
                         if (!isExpandedTablet) onClose()
                     },

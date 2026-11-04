@@ -71,11 +71,14 @@ fun ConversationDrawerContent(
     onOpenEngineSelector: (() -> Unit)? = null,
     onOpenConnect: (() -> Unit)? = null,
     onCloseDrawer: (() -> Unit)? = null,
+    onImportCliSession: ((AgentType, String) -> Unit)? = null,
+    onSelectAgentChild: ((AgentType) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var collapsedProjects by remember { mutableStateOf(setOf<String>()) }
     var searchQuery by remember { mutableStateOf("") }
     var isSearchActive by remember { mutableStateOf(false) }
+    var showImportCliDialog by remember { mutableStateOf(false) }
 
     val projects = catalog?.projects.orEmpty()
     val conversations = catalog?.conversations.orEmpty()
@@ -195,34 +198,35 @@ fun ConversationDrawerContent(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // New Conversation Button
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onNewConversation() },
-                shape = RoundedCornerShape(12.dp),
-                color = Color(0xFF1E1E22),
-                border = BorderStroke(1.dp, Color(0xFF2E2E34))
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 11.dp),
-                    verticalAlignment = Alignment.CenterVertically
+            // New Conversation & Import CLI Session Buttons
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Surface(
+                    modifier = Modifier.weight(1f).clickable { onNewConversation() },
+                    shape = RoundedCornerShape(10.dp),
+                    color = Color(0xFF1E1E22),
+                    border = BorderStroke(1.dp, Color(0xFF2E2E34))
                 ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Add,
-                        contentDescription = null,
-                        tint = Color(0xFFCC785C),
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(
-                        text = "Tạo phiên làm việc mới",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 13.5.sp
-                        ),
-                        color = Color(0xFFF4F4F5)
-                    )
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 9.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Outlined.Add, null, tint = Color(0xFFCC785C), modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Tạo phiên mới", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp), color = Color(0xFFE5E7EB), maxLines = 1)
+                    }
+                }
+                Surface(
+                    modifier = Modifier.clickable { showImportCliDialog = true },
+                    shape = RoundedCornerShape(10.dp),
+                    color = Color(0xFF1B1C22),
+                    border = BorderStroke(1.dp, Color(0xFF2E2E34))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 9.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Nhập CLI", style = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.sp, fontWeight = FontWeight.Medium), color = Color(0xFF9CA3AF))
+                    }
                 }
             }
         }
@@ -390,10 +394,12 @@ fun ConversationDrawerContent(
                             key = { conv -> "conv_${group.id}_${conv.id}" }
                         ) { conv ->
                             val isSelected = conv.id == activeConversationId
-                            ProjectConversationItem(
+                            ParentSessionDrawerItem(
                                 conversation = conv,
                                 isSelected = isSelected,
-                                onClick = { onSelectConversation(conv) }
+                                currentWriterAgent = selectedAgent,
+                                onSelectSession = { onSelectConversation(conv) },
+                                onSelectAgentChild = { agent -> onSelectAgentChild?.invoke(agent) }
                             )
                         }
                     }
@@ -414,5 +420,16 @@ fun ConversationDrawerContent(
                 onClick = onOpenSettings
             )
         }
+    }
+
+    if (showImportCliDialog) {
+        ImportCliSessionDialog(
+            initialAgent = selectedAgent,
+            onDismiss = { showImportCliDialog = false },
+            onImport = { agent, nativeId ->
+                showImportCliDialog = false
+                onImportCliSession?.invoke(agent, nativeId)
+            }
+        )
     }
 }

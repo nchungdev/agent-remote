@@ -17,6 +17,14 @@ sealed interface ChatIntent {
         val workspace: String? = null
     ) : ChatIntent
     data object NewConversation : ChatIntent
+    data object OpenNewSessionDialog : ChatIntent
+    data object DismissNewSessionDialog : ChatIntent
+    data class CreateNewSession(
+        val title: String,
+        val useWorktree: Boolean,
+        val baseBranch: String,
+        val agentType: AgentType
+    ) : ChatIntent
     data class SelectWorkspace(val workspace: String?) : ChatIntent
     data object RefreshCatalog : ChatIntent
     data class InputChanged(val newText: String) : ChatIntent
@@ -30,5 +38,8 @@ sealed interface ChatIntent {
     data class ApproveTool(val callId: String, val approved: Boolean) : ChatIntent
     data object CancelTask : ChatIntent
     data class UrlChanged(val newUrl: String) : ChatIntent
+    data class SwitchWriter(val targetAgent: AgentType) : ChatIntent
+    data class ConfirmSwitchWriter(val targetAgent: AgentType, val stopCurrent: Boolean) : ChatIntent
+    data object DismissSwitchWriterConfirm : ChatIntent
     data object ClearError : ChatIntent
 }

@@ -75,6 +75,16 @@ class ChatViewModel(
         checkAndSendNextQueued = { checkAndSendNextQueued() }
     )
 
+    private val sessionCoordinator = ChatSessionCoordinator(
+        gatewayClient = gatewayClient,
+        storage = storage,
+        scope = scope,
+        updateState = { transform -> _uiState.update(transform) },
+        cancelCurrentTask = { cancelTask() },
+        getCurrentState = { _uiState.value },
+        timestamp = { timestamp() }
+    )
+
     init {
         observeConnection()
         observeEvents()
@@ -171,6 +181,9 @@ class ChatViewModel(
                 val prefs = storage.load()
                 storage.save(prefs.copy(lastConversationId = "", lastConversationTitle = ""))
             }
+            ChatIntent.OpenNewSessionDialog -> _uiState.update { it.copy(isNewSessionDialogOpen = true) }
+            ChatIntent.DismissNewSessionDialog -> _uiState.update { it.copy(isNewSessionDialogOpen = false) }
+            is ChatIntent.CreateNewSession -> sessionCoordinator.handleCreateNewSession(intent)
             is ChatIntent.SelectWorkspace -> {
                 _uiState.update { it.copy(activeWorkspace = intent.workspace) }
             }
@@ -194,6 +207,9 @@ class ChatViewModel(
             is ChatIntent.ApproveTool -> approveTool(intent.callId, intent.approved)
             ChatIntent.CancelTask -> cancelTask()
             is ChatIntent.UrlChanged -> _uiState.update { it.copy(gatewayUrl = intent.newUrl) }
+            is ChatIntent.SwitchWriter -> sessionCoordinator.handleSwitchWriter(intent.targetAgent)
+            is ChatIntent.ConfirmSwitchWriter -> sessionCoordinator.handleConfirmSwitchWriter(intent.targetAgent, intent.stopCurrent)
+            ChatIntent.DismissSwitchWriterConfirm -> _uiState.update { it.copy(switchWriterConfirmTarget = null) }
             ChatIntent.ClearError -> _uiState.update { it.copy(errorMessage = null) }
         }
     }
