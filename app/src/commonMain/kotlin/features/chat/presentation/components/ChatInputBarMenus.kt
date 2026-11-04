@@ -18,13 +18,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.GppMaybe
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Shield
+import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material.icons.outlined.Terminal
 import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -188,6 +191,12 @@ internal fun splitModelName(rawName: String): Pair<String, String?> {
         val variant = rawName.substring(parenStart + 1, parenEnd).trim()
         return base to variant.takeIf { it.isNotEmpty() }
     }
+    for (suffix in listOf(" Medium", " High", " Low", " Thinking", " Flash")) {
+        if (rawName.endsWith(suffix, ignoreCase = true)) {
+            val base = rawName.substring(0, rawName.length - suffix.length).trim()
+            return base to suffix.trim()
+        }
+    }
     return rawName to null
 }
 
@@ -246,29 +255,53 @@ internal fun ModelMenuItem(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
+    val (baseName, variantName) = splitModelName(model.displayName)
+    val low = model.id.lowercase()
+    val isQuotaLimited = low.contains("claude") || low.contains("gpt")
+    val isNew = low.contains("argon") || low.contains("opus") || low.contains("sonnet")
+    val isNotice = low.contains("gpt")
+
     DropdownMenuItem(
         text = {
-            Column(modifier = Modifier.padding(vertical = 3.dp)) {
+            Row(
+                modifier = Modifier.padding(vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
-                    text = model.displayName,
+                    text = baseName,
                     style = MaterialTheme.typography.bodyMedium.copy(
-                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                        fontSize = 14.sp
+                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+                        fontSize = 13.5.sp
                     ),
                     color = if (isSelected) Color(0xFFF3F4F6) else Color(0xFFD4D6DC)
                 )
-                val sub = model.description.ifBlank { model.id }
-                if (sub.isNotBlank()) {
+                if (variantName != null) {
+                    Spacer(modifier = Modifier.width(5.dp))
                     Text(
-                        text = sub,
+                        text = variantName,
                         style = MaterialTheme.typography.bodySmall.copy(
-                            fontSize = 11.5.sp,
-                            fontFamily = FontFamily.Monospace
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Normal
                         ),
-                        color = Color(0xFF8A8D96),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        color = Color(0xFF8A8D96)
                     )
+                }
+                if (isQuotaLimited) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Icon(
+                        imageVector = Icons.Outlined.WarningAmber,
+                        contentDescription = "Hạn mức",
+                        tint = Color(0xFFE5A93C),
+                        modifier = Modifier.size(13.dp)
+                    )
+                }
+                if (isNew) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    PillBadge("New")
+                }
+                if (isNotice) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    PillBadge("Notice ⓘ")
                 }
             }
         },
@@ -278,10 +311,71 @@ internal fun ModelMenuItem(
                     imageVector = Icons.Outlined.Check,
                     contentDescription = "Đang chọn",
                     tint = Color(0xFFF3F4F6),
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(15.dp)
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Outlined.ChevronRight,
+                    contentDescription = null,
+                    tint = Color(0xFF5A5B64),
+                    modifier = Modifier.size(14.dp)
                 )
             }
         },
         onClick = onClick
     )
+}
+
+@Composable
+internal fun ViewUsageMenuItem(
+    onClick: () -> Unit
+) {
+    DropdownMenuItem(
+        leadingIcon = {
+            Icon(
+                imageVector = Icons.Outlined.Speed,
+                contentDescription = null,
+                tint = Color(0xFFCC785C),
+                modifier = Modifier.size(16.dp)
+            )
+        },
+        text = {
+            Text(
+                text = "Xem chi tiết Token (View Usage)",
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 13.sp
+                ),
+                color = Color(0xFFD4D6DC)
+            )
+        },
+        trailingIcon = {
+            Icon(
+                imageVector = Icons.Outlined.ChevronRight,
+                contentDescription = null,
+                tint = Color(0xFF6B6D76),
+                modifier = Modifier.size(14.dp)
+            )
+        },
+        onClick = onClick
+    )
+}
+
+@Composable
+private fun PillBadge(text: String) {
+    Surface(
+        shape = RoundedCornerShape(4.dp),
+        color = Color(0xFF282932),
+        border = BorderStroke(0.5.dp, Color(0xFF383A46))
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Medium
+            ),
+            color = Color(0xFFB0B3BE),
+            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+        )
+    }
 }

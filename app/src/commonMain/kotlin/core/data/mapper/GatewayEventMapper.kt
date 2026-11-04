@@ -71,10 +71,21 @@ object GatewayEventMapper {
                         timestamp = m.timestampMs ?: 0L
                     )
                 }
+                val tokenUsage = dto.tokenUsage?.let { tu ->
+                    app.duinch.agentremote.core.domain.model.ConversationTokenUsage(
+                        inputTokens = tu.inputTokens,
+                        cacheReadTokens = tu.cacheReadTokens,
+                        outputTokens = tu.outputTokens,
+                        totalTokens = tu.totalTokens,
+                        contextLimit = tu.contextLimit
+                    )
+                }
                 DomainGatewayEvent.ConversationHistory(
                     engine = dto.engine.orEmpty(),
                     conversationId = dto.conversationId.orEmpty(),
-                    messages = msgs
+                    messages = msgs,
+                    activeModel = dto.activeModel,
+                    tokenUsage = tokenUsage
                 )
             }
 

@@ -46,6 +46,7 @@ internal fun ModelSelectorDropdown(
     modelsToDisplay: List<AgentModel>,
     chipFontSize: TextUnit,
     onModelSelected: (AgentModel) -> Unit,
+    onViewUsage: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var showModelMenu by remember { mutableStateOf(false) }
@@ -123,6 +124,14 @@ internal fun ModelSelectorDropdown(
                     }
                 )
             }
+
+            HorizontalDivider(color = Color(0xFF26272F), thickness = 0.5.dp)
+            ViewUsageMenuItem(
+                onClick = {
+                    showModelMenu = false
+                    onViewUsage()
+                }
+            )
         }
     }
 }

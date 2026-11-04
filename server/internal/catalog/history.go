@@ -20,51 +20,78 @@ type HistoryMessage struct {
 	TimestampMs int64  `json:"timestampMs,omitempty"`
 }
 
-var userRequestRegex = regexp.MustCompile(`(?s)<USER_REQUEST>(.*?)</USER_REQUEST>`)
+type ConversationDetails struct {
+	Messages    []HistoryMessage `json:"messages"`
+	ActiveModel string           `json:"activeModel,omitempty"`
+	TokenUsage  *TokenUsage      `json:"tokenUsage,omitempty"`
+}
 
-// LoadHistory reads recent conversation dialogue from the engine's store on disk.
-func (s *Service) LoadHistory(ctx context.Context, engine Engine, conversationID string, limit int) ([]HistoryMessage, error) {
+type TokenUsage struct {
+	InputTokens     int `json:"inputTokens"`
+	CacheReadTokens int `json:"cacheReadTokens"`
+	OutputTokens    int `json:"outputTokens"`
+	TotalTokens     int `json:"totalTokens"`
+	ContextLimit    int `json:"contextLimit"`
+}
+
+var (
+	userRequestRegex    = regexp.MustCompile(`(?s)<USER_REQUEST>(.*?)</USER_REQUEST>`)
+	modelSelectionRegex = regexp.MustCompile("Model Selection`.*?to\\s+([^\\.\\n<]+)")
+)
+
+// LoadConversationDetails reads conversation dialogue, active model, and token usage from disk.
+func (s *Service) LoadConversationDetails(ctx context.Context, engine Engine, conversationID string, limit int) (ConversationDetails, error) {
 	if limit <= 0 {
 		limit = 30
 	}
-
 	switch engine {
 	case EngineAntigravity:
-		return s.loadAntigravityHistory(ctx, conversationID, limit)
+		return s.loadAntigravityDetails(ctx, conversationID, limit)
 	case EngineClaudeCode:
-		return s.loadClaudeHistory(ctx, conversationID, limit)
+		msgs, err := s.loadClaudeHistory(ctx, conversationID, limit)
+		return ConversationDetails{Messages: msgs}, err
 	case EngineCodex:
-		return s.loadCodexHistory(ctx, conversationID, limit)
+		msgs, err := s.loadCodexHistory(ctx, conversationID, limit)
+		return ConversationDetails{Messages: msgs}, err
 	default:
-		return nil, fmt.Errorf("engine '%s' does not support history loading yet", engine)
+		return ConversationDetails{}, fmt.Errorf("engine '%s' does not support history loading yet", engine)
 	}
 }
 
-func (s *Service) loadAntigravityHistory(ctx context.Context, conversationID string, limit int) ([]HistoryMessage, error) {
+// LoadHistory reads recent conversation dialogue from the engine's store on disk.
+func (s *Service) LoadHistory(ctx context.Context, engine Engine, conversationID string, limit int) ([]HistoryMessage, error) {
+	details, err := s.LoadConversationDetails(ctx, engine, conversationID, limit)
+	return details.Messages, err
+}
+
+func (s *Service) loadAntigravityDetails(ctx context.Context, conversationID string, limit int) (ConversationDetails, error) {
 	transcriptPath := filepath.Join(s.home, ".gemini", "antigravity", "brain", conversationID, ".system_generated", "logs", "transcript.jsonl")
 	file, err := os.Open(transcriptPath)
 	if err != nil {
-		cliPath := filepath.Join(s.home, ".gemini", "antigravity-cli", "brain", conversationID, ".system_generated", "logs", "transcript.jsonl")
-		file, err = os.Open(cliPath)
+		file, err = os.Open(filepath.Join(s.home, ".gemini", "antigravity-cli", "brain", conversationID, ".system_generated", "logs", "transcript.jsonl"))
 		if err != nil {
-			return nil, fmt.Errorf("transcript not found: %w", err)
+			return ConversationDetails{}, fmt.Errorf("transcript not found: %w", err)
 		}
 	}
 	defer file.Close()
 
 	var allMessages []HistoryMessage
+	var lastModel string
+	var lastInputTokens, lastCacheTokens, lastOutputTokens int
 	scanner := bufio.NewScanner(file)
-	// Allow large lines (up to 4MB for large outputs)
 	buf := make([]byte, 64*1024)
 	scanner.Buffer(buf, 4*1024*1024)
 
 	type transcriptEntry struct {
-		StepIndex int    `json:"step_index"`
-		Type      string `json:"type"`
-		Content   string `json:"content"`
-		CreatedAt string `json:"created_at"`
-		Thinking  string `json:"thinking"`
-		ToolCalls []struct {
+		StepIndex       int    `json:"step_index"`
+		Type            string `json:"type"`
+		Content         string `json:"content"`
+		CreatedAt       string `json:"created_at"`
+		Thinking        string `json:"thinking"`
+		InputTokens     int    `json:"input_tokens"`
+		CacheReadTokens int    `json:"cache_read_tokens"`
+		OutputTokens    int    `json:"output_tokens"`
+		ToolCalls       []struct {
 			Name string         `json:"name"`
 			Args map[string]any `json:"args"`
 		} `json:"tool_calls"`
@@ -72,7 +99,7 @@ func (s *Service) loadAntigravityHistory(ctx context.Context, conversationID str
 
 	for scanner.Scan() {
 		if ctx.Err() != nil {
-			return nil, ctx.Err()
+			return ConversationDetails{}, ctx.Err()
 		}
 
 		line := strings.TrimSpace(scanner.Text())
@@ -85,12 +112,19 @@ func (s *Service) loadAntigravityHistory(ctx context.Context, conversationID str
 			continue
 		}
 
-		var ts int64
-		if t, err := time.Parse(time.RFC3339Nano, entry.CreatedAt); err == nil {
-			ts = t.UnixMilli()
-		} else if t, err := time.Parse(time.RFC3339, entry.CreatedAt); err == nil {
-			ts = t.UnixMilli()
+		if entry.Type == "USER_INPUT" && strings.Contains(entry.Content, "Model Selection") {
+			if m := modelSelectionRegex.FindStringSubmatch(entry.Content); len(m) > 1 {
+				lastModel = strings.TrimSpace(m[1])
+			}
 		}
+
+		if entry.Type == "PLANNER_RESPONSE" && (entry.InputTokens > 0 || entry.CacheReadTokens > 0) {
+			lastInputTokens = entry.InputTokens
+			lastCacheTokens = entry.CacheReadTokens
+			lastOutputTokens = entry.OutputTokens
+		}
+
+		ts := parseTimestamp(entry.CreatedAt)
 
 		switch entry.Type {
 		case "USER_INPUT":
@@ -101,7 +135,7 @@ func (s *Service) loadAntigravityHistory(ctx context.Context, conversationID str
 			content = strings.TrimSpace(content)
 			if content != "" {
 				allMessages = append(allMessages, HistoryMessage{
-					ID:          fmt.Sprintf("user-%d", entry.StepIndex),
+					ID:          fmt.Sprintf("user-%d-%d", entry.StepIndex, len(allMessages)),
 					Role:        "user",
 					Content:     content,
 					TimestampMs: ts,
@@ -148,7 +182,7 @@ func (s *Service) loadAntigravityHistory(ctx context.Context, conversationID str
 					}
 				} else {
 					allMessages = append(allMessages, HistoryMessage{
-						ID:          fmt.Sprintf("asst-%d", entry.StepIndex),
+						ID:          fmt.Sprintf("asst-%d-%d", entry.StepIndex, len(allMessages)),
 						Role:        "assistant",
 						Content:     content,
 						Thinking:    thinking,
@@ -162,13 +196,33 @@ func (s *Service) loadAntigravityHistory(ctx context.Context, conversationID str
 	if len(allMessages) > limit {
 		allMessages = allMessages[len(allMessages)-limit:]
 	}
-	return allMessages, nil
+
+	return ConversationDetails{
+		Messages:    allMessages,
+		ActiveModel: lastModel,
+		TokenUsage:  determineTokenUsage(lastModel, lastInputTokens, lastCacheTokens, lastOutputTokens),
+	}, nil
+}
+
+func determineTokenUsage(model string, in, cache, out int) *TokenUsage {
+	if in <= 0 && cache <= 0 {
+		return nil
+	}
+	limit := 1000000
+	lower := strings.ToLower(model)
+	if strings.Contains(lower, "claude") {
+		limit = 200000
+	} else if strings.Contains(lower, "gpt") {
+		limit = 128000
+	}
+	return &TokenUsage{
+		InputTokens: in, CacheReadTokens: cache, OutputTokens: out,
+		TotalTokens: in + cache, ContextLimit: limit,
+	}
 }
 
 func (s *Service) loadClaudeHistory(ctx context.Context, conversationID string, limit int) ([]HistoryMessage, error) {
-	projectsDir := filepath.Join(s.home, ".claude", "projects")
-	pattern := filepath.Join(projectsDir, "*", conversationID+".jsonl")
-	matches, err := filepath.Glob(pattern)
+	matches, err := filepath.Glob(filepath.Join(s.home, ".claude", "projects", "*", conversationID+".jsonl"))
 	if err != nil || len(matches) == 0 {
 		return nil, fmt.Errorf("claude transcript not found for conversation %s", conversationID)
 	}
@@ -209,12 +263,7 @@ func (s *Service) loadClaudeHistory(ctx context.Context, conversationID string, 
 			continue
 		}
 
-		var ts int64
-		if t, err := time.Parse(time.RFC3339Nano, entry.Timestamp); err == nil {
-			ts = t.UnixMilli()
-		} else if t, err := time.Parse(time.RFC3339, entry.Timestamp); err == nil {
-			ts = t.UnixMilli()
-		}
+		ts := parseTimestamp(entry.Timestamp)
 
 		step++
 		if entry.Type == "user" {
@@ -278,18 +327,15 @@ func (s *Service) loadCodexHistory(ctx context.Context, conversationID string, l
 		}
 	}
 	if rolloutPath == "" {
-		matches, _ := filepath.Glob(filepath.Join(s.home, ".codex", "sessions", "*", "*", "*", "*"+conversationID+"*.jsonl"))
-		if len(matches) == 0 {
-			matches, _ = filepath.Glob(filepath.Join(s.home, ".codex", "archived_sessions", "*"+conversationID+"*.jsonl"))
-		}
-		if len(matches) > 0 {
+		if matches, _ := filepath.Glob(filepath.Join(s.home, ".codex", "sessions", "*", "*", "*", "*"+conversationID+"*.jsonl")); len(matches) > 0 {
 			rolloutPath = matches[0]
+		} else if archived, _ := filepath.Glob(filepath.Join(s.home, ".codex", "archived_sessions", "*"+conversationID+"*.jsonl")); len(archived) > 0 {
+			rolloutPath = archived[0]
 		}
 	}
 	if rolloutPath == "" {
 		return nil, fmt.Errorf("codex rollout not found for thread %s", conversationID)
 	}
-
 	file, err := os.Open(rolloutPath)
 	if err != nil {
 		return nil, err
@@ -321,12 +367,7 @@ func (s *Service) loadCodexHistory(ctx context.Context, conversationID string, l
 			continue
 		}
 
-		var ts int64
-		if t, err := time.Parse(time.RFC3339Nano, cl.Timestamp); err == nil {
-			ts = t.UnixMilli()
-		} else if t, err := time.Parse(time.RFC3339, cl.Timestamp); err == nil {
-			ts = t.UnixMilli()
-		}
+		ts := parseTimestamp(cl.Timestamp)
 
 		if cl.Type == "response_item" {
 			var respItem struct {
@@ -393,4 +434,14 @@ func (s *Service) loadCodexHistory(ctx context.Context, conversationID string, l
 		allMessages = allMessages[len(allMessages)-limit:]
 	}
 	return allMessages, nil
+}
+
+func parseTimestamp(raw string) int64 {
+	if t, err := time.Parse(time.RFC3339Nano, raw); err == nil {
+		return t.UnixMilli()
+	}
+	if t, err := time.Parse(time.RFC3339, raw); err == nil {
+		return t.UnixMilli()
+	}
+	return 0
 }

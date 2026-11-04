@@ -8,6 +8,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -29,6 +30,7 @@ import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Terminal
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -97,73 +99,80 @@ fun ToolTraceCard(
     }
 
     Column(modifier = modifier.fillMaxWidth()) {
-        Row(
+        Surface(
+            shape = RoundedCornerShape(10.dp),
+            color = Color(0xFF18181C),
+            border = BorderStroke(0.8.dp, Color(0xFF26262C)),
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(6.dp))
                 .clickable { isExpanded = !isExpanded }
-                .padding(horizontal = 4.dp, vertical = 5.dp),
-            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Outlined.Terminal,
-                contentDescription = null,
-                tint = if (isRunning) Color(0xFFD4785A) else Color(0xFF8E8E93),
+            Row(
                 modifier = Modifier
-                    .size(13.dp)
-                    .then(if (isRunning) Modifier.alpha(pulseAlpha) else Modifier)
-            )
-            Spacer(modifier = Modifier.width(7.dp))
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 9.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Terminal,
+                    contentDescription = null,
+                    tint = if (isRunning) Color(0xFFD4785A) else Color(0xFF8E8E93),
+                    modifier = Modifier
+                        .size(14.dp)
+                        .then(if (isRunning) Modifier.alpha(pulseAlpha) else Modifier)
+                )
+                Spacer(modifier = Modifier.width(9.dp))
 
-            if (isRunning) {
-                val runText = if (activeToolName != null) {
-                    "Đang thực thi: $activeToolName"
-                } else {
-                    "Đang thực thi công cụ..."
-                }
-                ShimmerText(
-                    text = runText,
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        fontSize = 12.5.sp,
-                        fontWeight = FontWeight.Medium
-                    ),
-                    baseColor = Color(0xFF9E9EA8),
-                    highlightColor = Color(0xFFFFFFFF)
-                )
-            } else {
-                val displayTitle = if (items.size > 1 && title == "Thực thi công cụ") {
-                    "Đã thực thi ${items.size} lệnh & tệp"
-                } else {
-                    title
-                }
-                Text(
-                    text = displayTitle,
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        fontSize = 12.5.sp,
-                        fontWeight = FontWeight.Medium
-                    ),
-                    color = Color(0xFFA1A1AA)
-                )
-                if (items.isNotEmpty() && displayTitle == title) {
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "(${items.size} tác vụ)",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontSize = 11.sp,
-                            fontFamily = FontFamily.Monospace
+                if (isRunning) {
+                    val runText = if (activeToolName != null) {
+                        "Đang thực thi: $activeToolName"
+                    } else {
+                        "Đang thực thi công cụ..."
+                    }
+                    ShimmerText(
+                        text = runText,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium
                         ),
-                        color = Color(0xFF63636B)
+                        baseColor = Color(0xFF9E9EA8),
+                        highlightColor = Color(0xFFFFFFFF)
                     )
+                } else {
+                    val displayTitle = if (items.size > 1 && title == "Thực thi công cụ") {
+                        "Đã thực thi ${items.size} lệnh & tệp"
+                    } else {
+                        title
+                    }
+                    Text(
+                        text = displayTitle,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium
+                        ),
+                        color = Color(0xFFD4D6DC)
+                    )
+                    if (items.isNotEmpty() && displayTitle == title) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "(${items.size} tác vụ)",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontSize = 11.5.sp,
+                                fontFamily = FontFamily.Monospace
+                            ),
+                            color = Color(0xFF71717A)
+                        )
+                    }
                 }
-            }
 
-            Spacer(modifier = Modifier.weight(1f))
-            Icon(
-                imageVector = if (isExpanded) Icons.Outlined.ExpandMore else Icons.Outlined.ChevronRight,
-                contentDescription = if (isExpanded) "Thu gọn" else "Mở rộng",
-                tint = Color(0xFF71717A),
-                modifier = Modifier.size(14.dp)
-            )
+                Spacer(modifier = Modifier.weight(1f))
+                Icon(
+                    imageVector = if (isExpanded) Icons.Outlined.ExpandMore else Icons.Outlined.ChevronRight,
+                    contentDescription = if (isExpanded) "Thu gọn" else "Mở rộng",
+                    tint = Color(0xFF71717A),
+                    modifier = Modifier.size(15.dp)
+                )
+            }
         }
 
         AnimatedVisibility(

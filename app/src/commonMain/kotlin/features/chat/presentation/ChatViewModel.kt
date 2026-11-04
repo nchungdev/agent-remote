@@ -42,7 +42,7 @@ class ChatViewModel(
             gatewayUrl = initialPrefs.lastGatewayUrl,
             selectedAgent = initialPrefs.defaultAgent,
             availableModels = initialModels,
-            selectedModel = initialModels.firstOrNull(),
+            selectedModel = initialModels.firstOrNull { it.id == initialPrefs.lastModelId } ?: initialModels.firstOrNull(),
             availablePermissions = initialPermissions,
             selectedPermission = initialPrefs.defaultAgent.defaultPermissionMode()
         )
@@ -75,17 +75,10 @@ class ChatViewModel(
                                 title = "Đã kết nối Agent Gateway",
                                 message = "Đã kết nối tới máy chủ ${status.host}"
                             )
-                        status is ConnectionStatus.Disconnected &&
-                            (prev is ConnectionStatus.Connected || prev is ConnectionStatus.Reconnecting) ->
-                            PlatformAlertNotifier.notifyConnectionChange(
-                                title = "Đã ngắt kết nối",
-                                message = "Đã ngắt kết nối với máy chủ Agent Gateway"
-                            )
+                        status is ConnectionStatus.Disconnected && (prev is ConnectionStatus.Connected || prev is ConnectionStatus.Reconnecting) ->
+                            PlatformAlertNotifier.notifyConnectionChange("Đã ngắt kết nối", "Đã ngắt kết nối với máy chủ Agent Gateway")
                         status is ConnectionStatus.Error && prev !is ConnectionStatus.Error ->
-                            PlatformAlertNotifier.notifyConnectionChange(
-                                title = "Lỗi kết nối máy chủ",
-                                message = status.message
-                            )
+                            PlatformAlertNotifier.notifyConnectionChange("Lỗi kết nối máy chủ", status.message)
                     }
                 }
 
@@ -173,7 +166,25 @@ class ChatViewModel(
 
             is DomainGatewayEvent.ConversationHistory -> {
                 if (_uiState.value.activeConversationId == event.conversationId) {
-                    _uiState.update { it.copy(messages = ChatStateReducer.mergeHistory(it, event.messages, currentAssistantMsgId)) }
+                    _uiState.update { s ->
+                        val matched = event.activeModel?.let { name ->
+                            val low = name.lowercase().replace("-", " ")
+                            s.availableModels.firstOrNull { m ->
+                                val mLow = m.displayName.lowercase().replace("-", " ")
+                                m.id.equals(name, true) || m.displayName.equals(name, true) ||
+                                    (low.contains("3.8") && mLow.contains("3.8")) ||
+                                    (low.contains("argon") && mLow.contains("argon")) ||
+                                    (low.contains("opus") && mLow.contains("opus")) ||
+                                    (low.contains("sonnet") && mLow.contains("sonnet")) ||
+                                    (low.contains("gpt") && mLow.contains("gpt"))
+                            }
+                        }
+                        s.copy(
+                            messages = ChatStateReducer.mergeHistory(s, event.messages, currentAssistantMsgId),
+                            tokenUsage = event.tokenUsage ?: s.tokenUsage,
+                            selectedModel = matched ?: s.selectedModel
+                        )
+                    }
                     _effects.tryEmit(ChatEffect.ScrollToBottom)
                 }
             }
@@ -283,15 +294,14 @@ class ChatViewModel(
     private fun selectAgent(type: AgentType) {
         scope.launch {
             val catalogModels = _uiState.value.catalogs[type]?.models.orEmpty()
-            val models = if (catalogModels.isNotEmpty()) catalogModels else type.defaultModels()
+            val models = catalogModels.ifEmpty { type.defaultModels() }
+            val prefs = storage.load()
+            val chosen = models.firstOrNull { it.id == prefs.lastModelId } ?: models.firstOrNull()
             _uiState.update {
                 ChatStateReducer.syncAgentPermissions(it, type).copy(
-                    availableModels = models,
-                    selectedModel = models.firstOrNull(),
-                    selectedPermission = type.defaultPermissionMode()
+                    availableModels = models, selectedModel = chosen, selectedPermission = type.defaultPermissionMode()
                 )
             }
-            val prefs = storage.load()
             storage.save(prefs.copy(lastEngine = type.name))
             gatewayClient.selectAgent(type)
             gatewayClient.requestCatalog()
@@ -301,6 +311,7 @@ class ChatViewModel(
     private fun selectModel(model: AgentModel) {
         scope.launch {
             _uiState.update { it.copy(selectedModel = model) }
+            storage.save(storage.load().copy(lastModelId = model.id))
             gatewayClient.selectModel(model.id)
         }
     }

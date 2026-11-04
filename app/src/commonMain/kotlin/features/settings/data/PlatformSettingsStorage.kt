@@ -14,7 +14,8 @@ data class AgentSettingsPreferences(
     val lastEngine: String = "ANTIGRAVITY",
     val lastConversationId: String = "",
     val lastConversationTitle: String = "",
-    val lastWorkspace: String = ""
+    val lastWorkspace: String = "",
+    val lastModelId: String = ""
 )
 
 expect class PlatformSettingsStorage() {

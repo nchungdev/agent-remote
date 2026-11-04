@@ -44,7 +44,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -57,6 +59,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.duinch.agentremote.core.domain.model.ConnectionStatus
+import app.duinch.agentremote.core.domain.model.ConversationTokenUsage
 import app.duinch.agentremote.core.domain.model.MessageRole
 import app.duinch.agentremote.core.presentation.components.ArcReactorEmblem
 import app.duinch.agentremote.core.presentation.util.isKeyboardVisible
@@ -65,6 +68,8 @@ import app.duinch.agentremote.core.presentation.util.rememberPlatformVoiceInput
 import app.duinch.agentremote.features.chat.presentation.components.ApprovalCard
 import app.duinch.agentremote.features.chat.presentation.components.ChatInputBar
 import app.duinch.agentremote.features.chat.presentation.components.ChatMessageBubble
+import app.duinch.agentremote.features.chat.presentation.components.CompactTokenGaugeBadge
+import app.duinch.agentremote.features.chat.presentation.components.TokenUsageDetailDialog
 import app.duinch.agentremote.features.chat.presentation.contract.ChatEffect
 import app.duinch.agentremote.features.chat.presentation.contract.ChatIntent
 
@@ -80,6 +85,7 @@ fun ChatScreen(
     val state by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
     val snackbarHostState = remember { SnackbarHostState() }
+    var showTokenDialog by remember { mutableStateOf(false) }
 
     val isImeVisible = isKeyboardVisible()
     LaunchedEffect(isImeVisible) {
@@ -164,6 +170,13 @@ fun ChatScreen(
                     }
                 },
                 actions = {
+                    if (state.tokenUsage != null) {
+                        CompactTokenGaugeBadge(
+                            tokenUsage = state.tokenUsage,
+                            onClick = { showTokenDialog = true },
+                            modifier = Modifier.padding(end = 4.dp)
+                        )
+                    }
                     IconButton(
                         onClick = { viewModel.processIntent(ChatIntent.NewConversation) }
                     ) {
@@ -230,6 +243,7 @@ fun ChatScreen(
                             viewModel.processIntent(ChatIntent.SelectWorkspace(proj.folders.firstOrNull()))
                         },
                         queuedMessages = state.queuedMessages,
+                        tokenUsage = state.tokenUsage,
                         onSendQueuedNow = { viewModel.processIntent(ChatIntent.SendQueuedNow(it)) },
                         onEditQueued = { viewModel.processIntent(ChatIntent.EditQueued(it)) },
                         onRemoveQueued = { viewModel.processIntent(ChatIntent.RemoveQueued(it)) },
@@ -294,6 +308,14 @@ fun ChatScreen(
                     .padding(top = 8.dp, start = 16.dp, end = 16.dp)
             )
         }
+    }
+
+    if (showTokenDialog) {
+        TokenUsageDetailDialog(
+            modelName = currentModelName,
+            tokenUsage = state.tokenUsage ?: ConversationTokenUsage(),
+            onDismiss = { showTokenDialog = false }
+        )
     }
 }
 

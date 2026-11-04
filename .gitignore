@@ -13,6 +13,8 @@
 service-account*.json
 
 # Gradle & Android Build Outputs
+server/bin/
+bin/
 .gradle/
 build/
 **/build/

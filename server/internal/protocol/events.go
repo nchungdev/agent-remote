@@ -104,10 +104,17 @@ func CatalogEvent(engineCatalog any) []byte {
 	return bytes
 }
 
-func ConversationHistoryEvent(engine string, conversationID string, messages any) []byte {
-	return marshalEvent("CONVERSATION_HISTORY", map[string]any{
+func ConversationHistoryEvent(engine string, conversationID string, messages any, activeModel string, tokenUsage any) []byte {
+	payload := map[string]any{
 		"engine":         engine,
 		"conversationId": conversationID,
 		"messages":       messages,
-	})
+	}
+	if activeModel != "" {
+		payload["activeModel"] = activeModel
+	}
+	if tokenUsage != nil {
+		payload["tokenUsage"] = tokenUsage
+	}
+	return marshalEvent("CONVERSATION_HISTORY", payload)
 }

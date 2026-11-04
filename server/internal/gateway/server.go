@@ -248,12 +248,12 @@ func (s *Server) HandleWS(w http.ResponseWriter, r *http.Request) {
 				engine = catalog.Engine(s.currentAgentType)
 			}
 			go func() {
-				msgs, err := s.catalog.LoadHistory(context.Background(), engine, msg.ConversationID, msg.Limit)
+				details, err := s.catalog.LoadConversationDetails(context.Background(), engine, msg.ConversationID, msg.Limit)
 				if err != nil {
 					log.Printf("[Gateway] Lỗi tải lịch sử hội thoại %s: %v", msg.ConversationID, err)
 					return
 				}
-				emit(protocol.ConversationHistoryEvent(string(engine), msg.ConversationID, msgs))
+				emit(protocol.ConversationHistoryEvent(string(engine), msg.ConversationID, details.Messages, details.ActiveModel, details.TokenUsage))
 			}()
 
 		case "SEND_PROMPT":

@@ -11,6 +11,12 @@ sealed interface DomainGatewayEvent {
     data class MessageCompleted(val messageId: String, val conversationId: String? = null) : DomainGatewayEvent
     data class ErrorOccurred(val message: String) : DomainGatewayEvent
     data class CatalogLoaded(val catalog: EngineCatalog) : DomainGatewayEvent
-    data class ConversationHistory(val engine: String, val conversationId: String, val messages: List<ChatMessage>) : DomainGatewayEvent
+    data class ConversationHistory(
+        val engine: String,
+        val conversationId: String,
+        val messages: List<ChatMessage>,
+        val activeModel: String? = null,
+        val tokenUsage: ConversationTokenUsage? = null
+    ) : DomainGatewayEvent
     data object Pong : DomainGatewayEvent
 }

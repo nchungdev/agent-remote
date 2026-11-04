@@ -26,7 +26,18 @@ data class GatewayEventDto(
     val catalog: EngineCatalogDto? = null,
     val engine: String? = null,
     val conversationId: String? = null,
-    val messages: List<HistoryMessageDto>? = null
+    val messages: List<HistoryMessageDto>? = null,
+    val activeModel: String? = null,
+    val tokenUsage: TokenUsageDto? = null
+)
+
+@Serializable
+data class TokenUsageDto(
+    val inputTokens: Int = 0,
+    val cacheReadTokens: Int = 0,
+    val outputTokens: Int = 0,
+    val totalTokens: Int = 0,
+    val contextLimit: Int = 1000000
 )
 
 @Serializable

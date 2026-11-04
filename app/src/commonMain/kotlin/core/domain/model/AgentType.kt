@@ -13,11 +13,10 @@ enum class AgentType(val displayName: String, val badge: String) {
         return when (this) {
             ANTIGRAVITY -> listOf(
                 AgentModel("gemini-4-argon-medium", "Gemini 4 Argon (Medium)", "Mặc định (Khuyên dùng)"),
-                AgentModel("gemini-4-argon-high", "Gemini 4 Argon (High)", "Suy luận nâng cao"),
-                AgentModel("gemini-3.8-flash-high", "Gemini 3.8 Flash (High)", "Phản hồi siêu tốc"),
-                AgentModel("claude-sonnet-5-5-medium", "Claude Sonnet 5.5", "Sonnet 5.5"),
-                AgentModel("claude-opus-5-5-high", "Claude Opus 5.5", "Opus 5.5 Deep Thinking"),
-                AgentModel("gpt-oss-120b-medium", "GPT-OSS 120B", "Mã nguồn mở")
+                AgentModel("gemini-3.8-flash-medium", "Gemini 3.8 Flash (Medium)", "Phản hồi nhanh & tối ưu"),
+                AgentModel("claude-opus-5-5-medium", "Claude Opus 5.5 (Medium)", "Lập trình chuyên sâu"),
+                AgentModel("claude-sonnet-5-5-medium", "Claude Sonnet 5.5 (Medium)", "Cân bằng tốc độ & chất lượng"),
+                AgentModel("gpt-oss-120b-medium", "GPT-OSS 120B (Medium)", "Mã nguồn mở")
             )
             CLAUDE_CODE -> listOf(
                 AgentModel("claude-3-7-sonnet-thinking", "Claude 3.7 Sonnet Thinking", "Thinking mở rộng"),

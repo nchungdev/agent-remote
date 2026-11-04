@@ -304,12 +304,12 @@ func (h *Hub) handleClientAction(dc *webrtc.DataChannel, msg protocol.ClientMess
 		}
 		if h.catalog != nil {
 			go func() {
-				msgs, err := h.catalog.LoadHistory(context.Background(), engine, msg.ConversationID, msg.Limit)
+				details, err := h.catalog.LoadConversationDetails(context.Background(), engine, msg.ConversationID, msg.Limit)
 				if err != nil {
 					log.Printf("[WebRTC] Lỗi tải lịch sử hội thoại %s: %v", msg.ConversationID, err)
 					return
 				}
-				emit(protocol.ConversationHistoryEvent(string(engine), msg.ConversationID, msgs))
+				emit(protocol.ConversationHistoryEvent(string(engine), msg.ConversationID, details.Messages, details.ActiveModel, details.TokenUsage))
 			}()
 		}
 

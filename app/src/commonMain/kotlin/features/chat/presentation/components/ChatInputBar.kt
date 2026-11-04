@@ -29,7 +29,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -67,6 +70,7 @@ fun ChatInputBar(
     availableProjects: List<EngineProject> = emptyList(),
     onProjectMentionSelected: (EngineProject) -> Unit = {},
     queuedMessages: List<QueuedMessage> = emptyList(),
+    tokenUsage: app.duinch.agentremote.core.domain.model.ConversationTokenUsage? = null,
     onSendQueuedNow: (String) -> Unit = {},
     onEditQueued: (String) -> Unit = {},
     onRemoveQueued: (String) -> Unit = {},
@@ -99,6 +103,16 @@ fun ChatInputBar(
             proj.name.lowercase().contains(mentionQuery) ||
                 proj.folders.any { it.lowercase().contains(mentionQuery) }
         }.take(5)
+    }
+
+    var showTokenDialog by remember { mutableStateOf(false) }
+
+    if (showTokenDialog && tokenUsage != null) {
+        TokenUsageDetailDialog(
+            modelName = activeModel?.displayName ?: selectedAgent.displayName,
+            tokenUsage = tokenUsage,
+            onDismiss = { showTokenDialog = false }
+        )
     }
 
     Column(
@@ -215,8 +229,17 @@ fun ChatInputBar(
                                     modelsToDisplay = modelsToDisplay,
                                     chipFontSize = chipFontSize,
                                     onModelSelected = onModelSelected,
+                                    onViewUsage = { showTokenDialog = true },
                                     modifier = Modifier.weight(1f, fill = false)
                                 )
+
+                                if (tokenUsage != null) {
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    CompactTokenGaugeBadge(
+                                        tokenUsage = tokenUsage,
+                                        onClick = { showTokenDialog = true }
+                                    )
+                                }
                             }
 
                             // Right group: Permission Selector + Voice Mic + Send / Stop

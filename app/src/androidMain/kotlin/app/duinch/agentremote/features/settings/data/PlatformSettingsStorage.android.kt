@@ -28,7 +28,8 @@ actual class PlatformSettingsStorage {
             lastEngine = sp.getString("last_engine", "ANTIGRAVITY").orEmpty(),
             lastConversationId = sp.getString("last_conversation_id", "").orEmpty(),
             lastConversationTitle = sp.getString("last_conversation_title", "").orEmpty(),
-            lastWorkspace = sp.getString("last_workspace", "").orEmpty()
+            lastWorkspace = sp.getString("last_workspace", "").orEmpty(),
+            lastModelId = sp.getString("last_model_id", "").orEmpty()
         )
     }
 
@@ -46,6 +47,7 @@ actual class PlatformSettingsStorage {
             .putString("last_conversation_id", prefs.lastConversationId)
             .putString("last_conversation_title", prefs.lastConversationTitle)
             .putString("last_workspace", prefs.lastWorkspace)
+            .putString("last_model_id", prefs.lastModelId)
             .apply()
     }
 }

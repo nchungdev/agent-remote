@@ -6,6 +6,7 @@ import app.duinch.agentremote.core.domain.model.AgentType
 import app.duinch.agentremote.core.domain.model.ApprovalRequest
 import app.duinch.agentremote.core.domain.model.ChatMessage
 import app.duinch.agentremote.core.domain.model.ConnectionStatus
+import app.duinch.agentremote.core.domain.model.ConversationTokenUsage
 import app.duinch.agentremote.core.domain.model.EngineCatalog
 import app.duinch.agentremote.core.domain.model.PermissionMode
 
@@ -38,6 +39,7 @@ data class ChatUiState(
     val isUploadingAttachment: Boolean = false,
     val queuedMessages: List<QueuedMessage> = emptyList(),
     val pendingApproval: ApprovalRequest? = null,
+    val tokenUsage: ConversationTokenUsage? = null,
     val inputText: String = "",
     val gatewayUrl: String = "",
     val isConnecting: Boolean = false,
