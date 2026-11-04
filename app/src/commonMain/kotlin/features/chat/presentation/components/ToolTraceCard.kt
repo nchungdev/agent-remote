@@ -8,14 +8,17 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -26,7 +29,6 @@ import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Terminal
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -63,38 +65,62 @@ fun ToolTraceCard(
         )
     )
 
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
-        color = Color(0xFF15151A),
-        border = BorderStroke(0.5.dp, Color(0xFF282834))
-    ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Row(
+    val activeToolName = remember(items) {
+        val last = items.lastOrNull()?.removePrefix("•")?.trim()
+        if (last.isNullOrBlank()) {
+            null
+        } else {
+            // If format is "run_command: Test something", show "Test something" or full summary
+            if (last.contains(":")) {
+                last.substringAfter(":").trim()
+            } else {
+                last
+            }
+        }
+    }
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(6.dp))
+                .clickable { isExpanded = !isExpanded }
+                .padding(horizontal = 4.dp, vertical = 5.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Terminal,
+                contentDescription = null,
+                tint = if (isRunning) Color(0xFFD4785A) else Color(0xFF8E8E93),
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .clickable { isExpanded = !isExpanded }
-                    .padding(horizontal = 10.dp, vertical = 7.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Terminal,
-                    contentDescription = null,
-                    tint = if (isRunning) Color(0xFFD4785A) else Color(0xFF8E8E93),
-                    modifier = Modifier
-                        .size(14.dp)
-                        .then(if (isRunning) Modifier.alpha(pulseAlpha) else Modifier)
-                )
-                Spacer(modifier = Modifier.width(7.dp))
-                Text(
-                    text = if (isRunning) "Đang chạy công cụ..." else title,
+                    .size(13.dp)
+                    .then(if (isRunning) Modifier.alpha(pulseAlpha) else Modifier)
+            )
+            Spacer(modifier = Modifier.width(7.dp))
+
+            if (isRunning) {
+                val runText = if (activeToolName != null) {
+                    "Đang chạy: $activeToolName"
+                } else {
+                    "Đang thực thi công cụ..."
+                }
+                ShimmerText(
+                    text = runText,
                     style = MaterialTheme.typography.bodySmall.copy(
                         fontSize = 12.5.sp,
                         fontWeight = FontWeight.Medium
                     ),
-                    color = Color(0xFFA1A1AA),
-                    modifier = if (isRunning) Modifier.alpha(pulseAlpha) else Modifier
+                    baseColor = Color(0xFFA1A1AA),
+                    highlightColor = Color(0xFFFDBA74)
+                )
+            } else {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontSize = 12.5.sp,
+                        fontWeight = FontWeight.Medium
+                    ),
+                    color = Color(0xFFA1A1AA)
                 )
                 if (items.isNotEmpty()) {
                     Spacer(modifier = Modifier.width(6.dp))
@@ -107,25 +133,37 @@ fun ToolTraceCard(
                         color = Color(0xFF63636B)
                     )
                 }
-                Spacer(modifier = Modifier.weight(1f))
-                Icon(
-                    imageVector = if (isExpanded) Icons.Outlined.ExpandMore else Icons.Outlined.ChevronRight,
-                    contentDescription = if (isExpanded) "Thu gọn" else "Mở rộng",
-                    tint = Color(0xFF71717A),
-                    modifier = Modifier.size(14.dp)
-                )
             }
 
-            AnimatedVisibility(
-                visible = isExpanded,
-                enter = expandVertically(),
-                exit = shrinkVertically()
+            Spacer(modifier = Modifier.weight(1f))
+            Icon(
+                imageVector = if (isExpanded) Icons.Outlined.ExpandMore else Icons.Outlined.ChevronRight,
+                contentDescription = if (isExpanded) "Thu gọn" else "Mở rộng",
+                tint = Color(0xFF71717A),
+                modifier = Modifier.size(14.dp)
+            )
+        }
+
+        AnimatedVisibility(
+            visible = isExpanded,
+            enter = expandVertically(),
+            exit = shrinkVertically()
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 6.dp, top = 2.dp, bottom = 4.dp)
+                    .height(IntrinsicSize.Min)
             ) {
-                Column(
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color(0xFF0F0F13))
-                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                        .width(1.5.dp)
+                        .fillMaxHeight()
+                        .background(Color(0xFF2C2C36))
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Column(
+                    modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     items.forEach { rawItem ->

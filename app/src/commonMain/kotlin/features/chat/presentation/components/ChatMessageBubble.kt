@@ -81,7 +81,8 @@ fun ChatMessageBubble(
                 if (message.content.isNotBlank()) {
                     MarkdownContent(
                         content = message.content,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        isStreaming = message.isStreaming
                     )
                 }
 

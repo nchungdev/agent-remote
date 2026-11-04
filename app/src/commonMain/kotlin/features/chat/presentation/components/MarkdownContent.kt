@@ -32,7 +32,8 @@ private sealed interface ContentSegment {
 @Composable
 fun MarkdownContent(
     content: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isStreaming: Boolean = false
 ) {
     val segments = remember(content) { parseMarkdownSegments(content) }
 
@@ -40,7 +41,8 @@ fun MarkdownContent(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        segments.forEach { segment ->
+        segments.forEachIndexed { index, segment ->
+            val isLast = index == segments.lastIndex
             when (segment) {
                 is ContentSegment.Text -> {
                     if (segment.text.isNotBlank()) {
@@ -51,10 +53,10 @@ fun MarkdownContent(
                     CodeBlockCard(language = segment.language, code = segment.code)
                 }
                 is ContentSegment.Thinking -> {
-                    ThinkingCard(thought = segment.thought)
+                    ThinkingCard(thought = segment.thought, isStreaming = isStreaming && isLast)
                 }
                 is ContentSegment.ToolTrace -> {
-                    ToolTraceCard(items = segment.tools)
+                    ToolTraceCard(items = segment.tools, isRunning = isStreaming && isLast)
                 }
             }
         }

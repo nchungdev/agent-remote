@@ -111,22 +111,35 @@ private fun TraceToolItem(toolCall: ToolCall) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = Color(0xFF71717A),
-                modifier = Modifier.size(14.dp)
+                tint = if (isRunning) Color(0xFFD4785A) else Color(0xFF71717A),
+                modifier = Modifier
+                    .size(13.dp)
+                    .then(if (isRunning) Modifier.alpha(pulseAlpha) else Modifier)
             )
             Spacer(modifier = Modifier.width(7.dp))
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Normal
-                ),
-                color = if (toolCall.status == ToolStatus.FAILED) Color(0xFFEF4444) else Color(0xFF8E8E93),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = if (isRunning) Modifier.alpha(pulseAlpha) else Modifier
-            )
-            Spacer(modifier = Modifier.width(3.dp))
+            if (isRunning) {
+                ShimmerText(
+                    text = "Đang chạy: $title...",
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontSize = 12.5.sp,
+                        fontWeight = FontWeight.Medium
+                    ),
+                    baseColor = Color(0xFFA1A1AA),
+                    highlightColor = Color(0xFFFDBA74)
+                )
+            } else {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontSize = 12.5.sp,
+                        fontWeight = FontWeight.Normal
+                    ),
+                    color = if (toolCall.status == ToolStatus.FAILED) Color(0xFFEF4444) else Color(0xFF8E8E93),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            Spacer(modifier = Modifier.width(4.dp))
             Icon(
                 imageVector = if (isExpanded) Icons.Outlined.ExpandMore else Icons.Outlined.ChevronRight,
                 contentDescription = null,
@@ -243,17 +256,17 @@ private fun LiveWorkingIndicator() {
             modifier = Modifier
                 .size(6.dp)
                 .alpha(alpha)
-                .background(Color(0xFF8E8E93), CircleShape)
+                .background(Color(0xFFD4785A), CircleShape)
         )
         Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = "Đang xử lý...",
+        ShimmerText(
+            text = "Đang xử lý phản hồi...",
             style = MaterialTheme.typography.bodySmall.copy(
-                fontSize = 13.sp,
+                fontSize = 12.5.sp,
                 fontWeight = FontWeight.Medium
             ),
-            color = Color(0xFF8E8E93),
-            modifier = Modifier.alpha(alpha)
+            baseColor = Color(0xFFA1A1AA),
+            highlightColor = Color(0xFFFDE68A)
         )
     }
 }
