@@ -75,9 +75,9 @@ Có thể làm song song: T2.3 với T2.4; T4.5 với T4.7 sau khi có T4.3. T4.
 - [x] [T0.1 Đọc bối cảnh (S)](./parent-session-tasks/T0.1.md)
 - [x] [T0.2 Chốt phạm vi pilot (S)](./parent-session-tasks/T0.2.md)
 - [x] [T0.3 Chạy baseline (S)](./parent-session-tasks/T0.3.md)
-- [ ] [T0.4 Bắt mẫu output CLI 💰 (M)](./parent-session-tasks/T0.4.md)
+- [x] [T0.4 Bắt mẫu output CLI 💰 (M)](./parent-session-tasks/T0.4.md)
 
-- [ ] [T0.5 Xác minh harness theo phiên bản (M)](./parent-session-tasks/T0.5.md)
+- [x] [T0.5 Xác minh harness theo phiên bản (M)](./parent-session-tasks/T0.5.md)
 
 ### Ranh giới harness
 

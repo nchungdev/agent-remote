@@ -1,0 +1,4 @@
+{"type":"thread.created","thread_id":"th_01j9xexample"}
+{"type":"item.created","item":{"id":"it_01","type":"agent_message","text":""}}
+{"type":"item.completed","item":{"id":"it_01","type":"agent_message","text":"Xin chào, tôi đã phân tích yêu cầu."}}
+{"type":"turn.completed"}

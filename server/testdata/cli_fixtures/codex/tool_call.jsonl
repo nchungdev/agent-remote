@@ -1,0 +1,6 @@
+{"type":"thread.created","thread_id":"th_01j9xexample"}
+{"type":"item.started","item":{"id":"cmd_01","type":"command_execution","command":"git status --porcelain"}}
+{"type":"item.completed","item":{"id":"cmd_01","type":"command_execution","command":"git status --porcelain","aggregated_output":"M main.go\n","status":"completed","exit_code":0}}
+{"type":"item.created","item":{"id":"it_02","type":"agent_message","text":""}}
+{"type":"item.completed","item":{"id":"it_02","type":"agent_message","text":"File main.go đã thay đổi."}}
+{"type":"turn.completed"}

@@ -1,0 +1,2 @@
+{"type":"thread.created","thread_id":"th_01j9xexample"}
+{"type":"turn.failed","message":"{\"error\":{\"message\":\"You have exceeded your current quota, please check your plan and billing details.\",\"type\":\"insufficient_quota\",\"code\":\"insufficient_quota\"}}"}

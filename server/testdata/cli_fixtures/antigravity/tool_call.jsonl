@@ -1,0 +1,3 @@
+{"event":"step_update","conversation_id":"conv_agy_01","step_update":{"step_index":0,"step_type":"tool","tool_name":"read_file","state":"ACTIVE","tool_info":{"name":"read_file","parameters":{"Path":"/repo/README.md"},"output":""}}}
+{"event":"step_update","conversation_id":"conv_agy_01","step_update":{"step_index":0,"step_type":"tool","tool_name":"read_file","state":"DONE","tool_info":{"name":"read_file","parameters":{"Path":"/repo/README.md"},"output":"# Project Title\n"}}}
+{"event":"result","result":{"status":"SUCCESS","response":"Nội dung file đã đọc.","conversation_id":"conv_agy_01"}}

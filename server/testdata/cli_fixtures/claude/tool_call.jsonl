@@ -1,0 +1,4 @@
+{"type":"system","session_id":"sess_claude_01"}
+{"type":"assistant","session_id":"sess_claude_01","message":{"content":[{"type":"tool_use","id":"tool_01","name":"Bash","input":{"command":"git status"}}]}}
+{"type":"user","session_id":"sess_claude_01","message":{"content":[{"type":"tool_result","tool_use_id":"tool_01","content":"On branch main\nnothing to commit\n","is_error":false}]}}
+{"type":"result","session_id":"sess_claude_01","result":"Working tree sạch sẽ.","is_error":false}

@@ -1,0 +1,4 @@
+{"type":"system","session_id":"sess_claude_01"}
+{"type":"stream_event","session_id":"sess_claude_01","event":{"type":"content_block_delta","delta":{"type":"thinking_delta","thinking":"Let's check the request"}}}
+{"type":"stream_event","session_id":"sess_claude_01","event":{"type":"content_block_delta","delta":{"type":"text_delta","text":"Xin chào, tôi là Claude Code."}}}
+{"type":"result","session_id":"sess_claude_01","result":"Xin chào, tôi là Claude Code.","is_error":false}
