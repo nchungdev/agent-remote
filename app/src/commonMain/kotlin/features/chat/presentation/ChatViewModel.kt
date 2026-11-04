@@ -201,6 +201,15 @@ class ChatViewModel(
                         messages = emptyList()
                     )
                 }
+                val prefs = storage.load()
+                storage.save(
+                    prefs.copy(
+                        lastEngine = targetAgent.name,
+                        lastConversationId = intent.conversationId,
+                        lastConversationTitle = intent.title.orEmpty(),
+                        lastWorkspace = intent.workspace.orEmpty()
+                    )
+                )
                 scope.launch {
                     gatewayClient.selectAgent(targetAgent)
                     gatewayClient.requestHistory(intent.conversationId, targetAgent)
@@ -217,6 +226,8 @@ class ChatViewModel(
                         messages = emptyList()
                     )
                 }
+                val prefs = storage.load()
+                storage.save(prefs.copy(lastConversationId = "", lastConversationTitle = ""))
             }
             is ChatIntent.SelectWorkspace -> {
                 _uiState.update { it.copy(activeWorkspace = intent.workspace) }
@@ -257,6 +268,8 @@ class ChatViewModel(
     }
 
     private fun disconnect() {
+        val prefs = storage.load()
+        storage.save(prefs.copy(lastGatewayUrl = "", lastConversationId = ""))
         scope.launch {
             gatewayClient.disconnect()
         }
@@ -273,6 +286,8 @@ class ChatViewModel(
                     selectedPermission = type.defaultPermissionMode()
                 )
             }
+            val prefs = storage.load()
+            storage.save(prefs.copy(lastEngine = type.name))
             gatewayClient.selectAgent(type)
             gatewayClient.requestCatalog()
         }

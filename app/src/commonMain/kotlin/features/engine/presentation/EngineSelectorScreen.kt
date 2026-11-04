@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -42,6 +43,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.duinch.agentremote.core.domain.model.AgentType
@@ -105,13 +107,34 @@ fun EngineSelectorScreen(
         containerColor = Color(0xFF141416),
         topBar = {
             TopAppBar(
-                title = { },
+                title = {
+                    Column {
+                        Text(
+                            text = "Agent Remote",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 17.sp
+                            ),
+                            color = Color(0xFFF4F4F5),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = "Chọn Coding Engine",
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.5.sp),
+                            color = Color(0xFFA1A1AA),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                },
                 actions = {
                     IconButton(onClick = onOpenSettings) {
                         Icon(
                             imageVector = Icons.Outlined.Settings,
                             contentDescription = "Cài đặt",
-                            tint = Color(0xFFA1A1AA)
+                            tint = Color(0xFFE4E4E7),
+                            modifier = Modifier.size(22.dp)
                         )
                     }
                 },
@@ -119,31 +142,36 @@ fun EngineSelectorScreen(
             )
         }
     ) { paddingValues ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 8.dp)
+                .padding(paddingValues),
+            contentAlignment = Alignment.TopCenter
         ) {
-            Text(
-                text = "Chọn Coding Engine",
-                style = MaterialTheme.typography.headlineMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 24.sp
-                ),
-                color = Color(0xFFF4F4F5)
-            )
+            Column(
+                modifier = Modifier
+                    .widthIn(max = 580.dp)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp, vertical = 12.dp)
+            ) {
+                Text(
+                    text = "Lựa chọn AI Coding Engine",
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp
+                    ),
+                    color = Color(0xFFF4F4F5)
+                )
 
-            Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
-            Text(
-                text = "Lựa chọn AI Coding Agent bạn muốn điều khiển trên Host",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFF71717A)
-            )
+                Text(
+                    text = "Lựa chọn AI Coding Agent bạn muốn điều khiển trên Host",
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
+                    color = Color(0xFF71717A)
+                )
 
-            Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 availableEngines.forEach { engine ->
@@ -258,4 +286,5 @@ fun EngineSelectorScreen(
             Spacer(modifier = Modifier.height(30.dp))
         }
     }
+}
 }

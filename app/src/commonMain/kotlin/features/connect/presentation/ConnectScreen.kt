@@ -171,10 +171,9 @@ fun ConnectScreen(
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .widthIn(max = 640.dp)
+                    .widthIn(max = 560.dp)
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp, vertical = 8.dp),
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Hiển thị máy chủ LAN / Cục bộ được tự động dò thấy khi chưa kết nối
@@ -182,7 +181,12 @@ fun ConnectScreen(
                     discoveredServers.forEach { server ->
                         DiscoveredServerBanner(
                             server = server,
-                            onConnect = onConnect,
+                            onConnect = { host ->
+                                val prefs = PlatformSettingsStorage()
+                                val cur = prefs.load()
+                                prefs.save(cur.copy(lastGatewayUrl = host, autoReconnect = true))
+                                onConnect(host)
+                            },
                             modifier = Modifier.fillMaxWidth()
                         )
                         Spacer(modifier = Modifier.height(14.dp))

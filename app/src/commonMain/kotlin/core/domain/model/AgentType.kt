@@ -1,5 +1,8 @@
 package app.duinch.agentremote.core.domain.model
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 enum class AgentType(val displayName: String, val badge: String) {
     ANTIGRAVITY("Antigravity", "AGY"),
     CLAUDE_CODE("Claude Code", "CLAUDE"),

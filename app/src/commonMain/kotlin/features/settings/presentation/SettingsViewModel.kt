@@ -79,13 +79,12 @@ class SettingsViewModel(
         val s = _uiState.value
         val existing = storage.load()
         storage.save(
-            AgentSettingsPreferences(
+            existing.copy(
                 defaultAgent = s.defaultAgent,
                 autoReconnect = s.autoReconnect,
                 notifyConnectionChange = s.notifyConnectionChange,
                 notifyAgentApproval = s.notifyAgentApproval,
-                lastGatewayUrl = s.gatewayHost.ifBlank { existing.lastGatewayUrl },
-                recentTunnels = existing.recentTunnels
+                lastGatewayUrl = s.gatewayHost.ifBlank { existing.lastGatewayUrl }
             )
         )
     }

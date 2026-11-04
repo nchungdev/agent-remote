@@ -48,6 +48,7 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.duinch.agentremote.core.domain.model.AgentType
 import app.duinch.agentremote.core.domain.model.ConnectionStatus
 import app.duinch.agentremote.core.data.factory.createPlatformAgentGatewayClient
 import app.duinch.agentremote.features.chat.presentation.ChatScreen
@@ -57,6 +58,7 @@ import app.duinch.agentremote.features.chat.presentation.components.Conversation
 import app.duinch.agentremote.features.chat.presentation.contract.ChatIntent
 import app.duinch.agentremote.features.connect.presentation.ConnectScreen
 import app.duinch.agentremote.features.engine.presentation.EngineSelectorScreen
+import app.duinch.agentremote.features.settings.data.PlatformSettingsStorage
 import app.duinch.agentremote.features.settings.presentation.SettingsScreen
 import app.duinch.agentremote.features.settings.presentation.SettingsViewModel
 import app.duinch.agentremote.features.updater.data.GitHubAppUpdateRepository
@@ -79,15 +81,62 @@ fun App() {
 
     val chatState by chatViewModel.uiState.collectAsState()
 
-    var currentScreen by remember { mutableStateOf(AppScreen.CONNECT) }
+    val initialPrefs = remember { PlatformSettingsStorage().load() }
+    var currentScreen by remember {
+        mutableStateOf(
+            if (initialPrefs.lastGatewayUrl.isNotBlank()) {
+                AppScreen.CHAT
+            } else {
+                AppScreen.CONNECT
+            }
+        )
+    }
     var previousScreen by remember { mutableStateOf(AppScreen.CONNECT) }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val coroutineScope = rememberCoroutineScope()
 
-    // Auto navigate from CONNECT to SELECT_ENGINE once connection is established
+    var hasAutoConnected by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        if (!hasAutoConnected) {
+            hasAutoConnected = true
+            val prefs = PlatformSettingsStorage().load()
+            if (prefs.lastGatewayUrl.isNotBlank()) {
+                chatViewModel.processIntent(ChatIntent.UrlChanged(prefs.lastGatewayUrl))
+                chatViewModel.processIntent(ChatIntent.Connect(prefs.lastGatewayUrl))
+            }
+        }
+    }
+
+    var hasRestoredSession by remember { mutableStateOf(false) }
     LaunchedEffect(chatState.connectionStatus) {
-        if (chatState.connectionStatus is ConnectionStatus.Connected && currentScreen == AppScreen.CONNECT) {
-            currentScreen = AppScreen.SELECT_ENGINE
+        val status = chatState.connectionStatus
+        if (status is ConnectionStatus.Connected) {
+            val prefs = PlatformSettingsStorage().load()
+            if (!hasRestoredSession) {
+                hasRestoredSession = true
+                val agent = AgentType.entries.firstOrNull { it.name == prefs.lastEngine } ?: AgentType.ANTIGRAVITY
+                if (prefs.lastConversationId.isNotBlank()) {
+                    chatViewModel.processIntent(
+                        ChatIntent.SelectConversation(
+                            conversationId = prefs.lastConversationId,
+                            title = prefs.lastConversationTitle.ifBlank { "Hội thoại" },
+                            agentType = agent,
+                            workspace = prefs.lastWorkspace.ifBlank { null }
+                        )
+                    )
+                } else {
+                    chatViewModel.processIntent(ChatIntent.SelectAgent(agent))
+                }
+            }
+            currentScreen = AppScreen.CHAT
+        } else if (status is ConnectionStatus.Disconnected || status is ConnectionStatus.Error) {
+            hasRestoredSession = false
+            if (currentScreen != AppScreen.SETTINGS) {
+                val prefs = PlatformSettingsStorage().load()
+                if (prefs.lastGatewayUrl.isBlank()) {
+                    currentScreen = AppScreen.CONNECT
+                }
+            }
         }
     }
 
@@ -214,6 +263,7 @@ fun App() {
                                 onDisconnect = {
                                     chatViewModel.processIntent(ChatIntent.Disconnect)
                                     chatViewModel.processIntent(ChatIntent.UrlChanged(""))
+                                    currentScreen = AppScreen.CONNECT
                                 },
                                 onOpenSettings = {
                                     previousScreen = currentScreen

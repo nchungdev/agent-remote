@@ -119,11 +119,12 @@ internal object ChatStateReducer {
     }
 
     fun mergeHistory(current: ChatUiState, history: List<ChatMessage>, activeMsgId: String?): List<ChatMessage> {
-        return if (activeMsgId != null) {
-            val activeTurn = current.messages.filter { it.isStreaming || it.id == activeMsgId || it.role == MessageRole.USER }
+        val merged = if (activeMsgId != null) {
+            val activeTurn = current.messages.filter { it.isStreaming || it.id == activeMsgId }
             history + activeTurn
         } else {
             history
         }
+        return merged.distinctBy { it.id }
     }
 }

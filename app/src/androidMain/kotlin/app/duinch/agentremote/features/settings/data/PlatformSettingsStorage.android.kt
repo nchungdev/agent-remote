@@ -24,7 +24,11 @@ actual class PlatformSettingsStorage {
             notifyConnectionChange = sp.getBoolean("notify_connection_change", true),
             notifyAgentApproval = sp.getBoolean("notify_agent_approval", true),
             lastGatewayUrl = decryptedGatewayUrl,
-            recentTunnels = recents
+            recentTunnels = recents,
+            lastEngine = sp.getString("last_engine", "ANTIGRAVITY").orEmpty(),
+            lastConversationId = sp.getString("last_conversation_id", "").orEmpty(),
+            lastConversationTitle = sp.getString("last_conversation_title", "").orEmpty(),
+            lastWorkspace = sp.getString("last_workspace", "").orEmpty()
         )
     }
 
@@ -38,6 +42,10 @@ actual class PlatformSettingsStorage {
             .putBoolean("notify_agent_approval", prefs.notifyAgentApproval)
             .putString("last_gateway_url", KeystoreCipher.encrypt(prefs.lastGatewayUrl))
             .putString("recent_tunnels", KeystoreCipher.encrypt(recentJoined))
+            .putString("last_engine", prefs.lastEngine)
+            .putString("last_conversation_id", prefs.lastConversationId)
+            .putString("last_conversation_title", prefs.lastConversationTitle)
+            .putString("last_workspace", prefs.lastWorkspace)
             .apply()
     }
 }
