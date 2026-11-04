@@ -1,0 +1,20 @@
+# T4b.7 — Backlog đối chiếu với sản phẩm hiện tại
+
+Baseline source: app có queue trong `ChatUiState`, upload attachment, approval card, thông báo kết nối/approval và catalog/history. Đây là các điểm tái sử dụng. Kiểm tra end-to-end trước khi đánh dấu đã đạt; UI có mặt không tự chứng minh trạng thái bền qua restart, nhiều client hoặc đổi engine.
+
+| Ưu tiên | Workflow dùng chung | Khoảng trống và tiêu chí nghiệm thu |
+|---|---|---|
+| P1 | **Điều khiển công việc từ xa** | Nâng queue hiện có thành hàng đợi bền theo phiên, giữ draft và attachment; sửa, xóa và xem đích từng mục. Phân biệt xếp hàng, steer native và dừng rồi gửi. Sau đổi writer hoặc reconnect, mục chờ giữ đích đã chọn và không chạy trùng. Inbox chung cho câu hỏi, duyệt quyền và lượt lỗi, mở đúng phiên/lượt từ thông báo. |
+| P1 | **Chọn nguồn thay cho đọc lại toàn bộ** | Một picker cho đoạn chat, tệp/dòng, terminal log, diff, artifact và phiên khác. Lưu nguồn có phiên bản, preview phần đưa vào context và giới hạn kích thước. Ánh xạ attachment theo capability; nếu engine không đọc được định dạng, báo và cho chọn cách chuyển đổi rõ ràng. |
+| P1 | **Review như một luồng hoàn chỉnh** | Diff theo checkout hoặc snapshot lượt; bình luận neo theo file, revision và hunk. Gửi riêng các bình luận đã chọn, giữ trạng thái mở/đã xử lý khi đổi agent. Nếu diff thay đổi, đánh dấu anchor cũ. Card kết quả liên kết test, patch, ảnh hoặc log gốc. |
+| P2 | **Khôi phục và tìm lại công việc** | Tìm kiếm phiên, tiêu đề, tag, ghim, archive và timeline phân trang. Cung cấp fork, compact và checkpoint với nguồn truy xuất được. Phục hồi file chỉ mở khi snapshot đủ và có preview; thay đổi do người dùng hay shell có thể nằm ngoài checkpoint native. |
+| P2 | **Worktree sẵn sàng để chạy** | Profile setup theo repo, bước bootstrap có log và trạng thái thiếu dependency, chạy trong checkout được chọn. Kịch bản setup cần người dùng chọn hoặc duyệt. Thu thập kết quả build/test thành artifact để engine tiếp theo dùng lại. |
+| P2 | **Đặt mục tiêu, làm rõ yêu cầu và giữ bài học** | Tách phỏng vấn yêu cầu, plan, điều kiện hoàn thành và kiểm chứng. Thêm workflow kiểu Learn tạo đề xuất rule/skill có diff và phạm vi, chỉ áp dụng khi được duyệt. Cho phép gắn quy tắc/workflow dùng chung theo repo; adapter chỉ ánh xạ cách truyền. |
+| P3 | **Tác vụ nền và tự động hóa** | Danh sách tác vụ đang chạy và trạng thái chờ, kiểm tra theo lịch hoặc trigger do người dùng cấu hình. Mỗi job có checkout, quyền, ngân sách và tiêu chí thông báo. Không mở quyền ghi hay tự chuyển engine khi chạy nền. Gắn kết quả vào cùng timeline. |
+| P3 | **Kiểm chứng trực quan và phương thức nhập** | Browser/preview do host cung cấp theo phạm vi đã cấp; lưu screenshot, log và recording thành artifact dùng chung. Voice là phương thức nhập hoặc phản hồi; người dùng xem bản chép trước khi gửi. Các dạng này kiểm thử riêng trên từng nền tảng app. |
+
+**Nguồn đối chiếu:** [Codex Remote workflows](https://developers.openai.com/blog/mastering-codex-remote-for-engineering) · [Claude Code extensions](https://code.claude.com/docs/en/features-overview) · [Claude checkpoints](https://code.claude.com/docs/en/checkpointing) · [Antigravity mentions](https://antigravity.google/docs/at-mentions) · [Review changes](https://antigravity.google/docs/review-changes/) · [Learn](https://antigravity.google/docs/commands/learn) · [Browser verification](https://www.antigravity.google/docs/commands/browser).
+
+**Cách giữ backlog cập nhật.** Mỗi ứng viên ghi nguồn, bề mặt hãng, hành vi người dùng cần, baseline Agent Remote, chiến lược dùng chung và phần native tùy chọn. Gắn một trong các trạng thái: đã có một phần, cần xây chung, phụ thuộc capability host, hoặc cần xác minh. Chỉ tick khi workflow chạy qua cả ba engine và fake adapter mới với workflow dùng chung mà không đổi phần lõi chung. P1 sau pilot bàn giao, P2 sau khi state và replay ổn định, P3 cần đánh giá riêng về quyền và chi phí.
+
+[Roadmap phiên cha](../ROADMAP.md) · [Backlog ba engine](../ROADMAP.md#backlog-triển-khai-ba-engine)

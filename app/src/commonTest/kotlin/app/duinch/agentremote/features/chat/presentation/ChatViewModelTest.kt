@@ -1,5 +1,6 @@
 package app.duinch.agentremote.features.chat.presentation
 
+import app.duinch.agentremote.core.data.cache.ConversationCache
 import app.duinch.agentremote.core.domain.model.AgentState
 import app.duinch.agentremote.core.domain.model.ApprovalRequest
 import app.duinch.agentremote.core.domain.model.DomainGatewayEvent
@@ -30,12 +31,16 @@ class ChatViewModelTest {
     @BeforeTest
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
+        ConversationCache.clear()
+        val storage = app.duinch.agentremote.features.settings.data.PlatformSettingsStorage()
+        storage.save(app.duinch.agentremote.features.settings.data.AgentSettingsPreferences())
         fakeClient = FakeAgentGatewayClient()
-        viewModel = ChatViewModel(fakeClient, scope = kotlinx.coroutines.CoroutineScope(testDispatcher))
+        viewModel = ChatViewModel(fakeClient, storage = storage, scope = kotlinx.coroutines.CoroutineScope(testDispatcher))
     }
 
     @AfterTest
     fun tearDown() {
+        ConversationCache.clear()
         Dispatchers.resetMain()
     }
 

@@ -1,5 +1,7 @@
 # Engineering Handoff: `adb-remote` & `agent-remote` (+ `remote-tunnel`)
 
+> **Lưu trữ.** Ảnh chụp trạng thái ngày 2026-11-02. Version và lệnh trong tài liệu phản ánh thời điểm bàn giao.
+
 > **Updated**: `2026-11-02T18:39:06+07:00`  
 > **Workspace**: `/Volumes/512GB/AI Workspace`
 

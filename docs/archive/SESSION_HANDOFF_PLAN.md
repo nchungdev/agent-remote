@@ -1,8 +1,8 @@
 # Kế hoạch chuyển engine (handoff) và memory cho Agent Remote
 
-> **Kiến trúc đã được thay bằng [PARENT_SESSION_TASKS.md](./PARENT_SESSION_TASKS.md);** phần nghiên cứu và bảo mật ở đây vẫn dùng được.
->
-> **Trạng thái:** để làm sau, chưa có code nào trong repo. Khảo sát ngày 2026-11-04 trên commit `f9d8a79`; số dòng có thể lệch khi code thay đổi.
+> **Lưu trữ.** Đề xuất handoff đời đầu. Kiến trúc hiện hành nằm trong [plan phiên cha](../ROADMAP.md). Giữ lại để tham khảo phần nghiên cứu và bảo mật.
+
+> **Trạng thái tại thời điểm khảo sát:** để làm sau, chưa có code nào trong repo. Khảo sát ngày 2026-11-04 trên commit `f9d8a79`; số dòng có thể lệch khi code thay đổi.
 
 ## 1. Kết luận
 
@@ -231,4 +231,4 @@ Theo mức tăng dần, dừng ngay khi đủ:
 1. Có cho phép dùng **quota thật** cho các bài thử ở Giai đoạn 3 không?
 2. Có cần cảnh báo gửi nội dung cho nhà cung cấp khác **mọi lần** hay chỉ lần đầu với mỗi engine?
 3. Khi chuyển từ hội thoại đang chạy, có **hỏi xác nhận** trước khi dừng engine nguồn không? Đề xuất là có.
-4. Thứ tự so với [MODEL_COST_PLAN.md](./MODEL_COST_PLAN.md): đề xuất làm việc giữ `workspace` và usage trước, vì handoff cũng cần chúng để đo.
+4. Thứ tự so với [MODEL_COST_PLAN.md](../reference/MODEL_COST_PLAN.md): đề xuất làm việc giữ `workspace` và usage trước, vì handoff cũng cần chúng để đo.

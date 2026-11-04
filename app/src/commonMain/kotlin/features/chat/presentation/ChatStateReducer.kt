@@ -1,5 +1,6 @@
 package app.duinch.agentremote.features.chat.presentation
 
+import app.duinch.agentremote.core.domain.model.AgentModel
 import app.duinch.agentremote.core.domain.model.AgentState
 import app.duinch.agentremote.core.domain.model.AgentType
 import app.duinch.agentremote.core.domain.model.ChatMessage
@@ -147,5 +148,19 @@ internal object ChatStateReducer {
             inputText = item.text,
             attachedFiles = item.attachments
         )
+    }
+
+    fun findMatchingModel(availableModels: List<AgentModel>, modelName: String?): AgentModel? {
+        if (modelName == null) return null
+        val low = modelName.lowercase().replace("-", " ")
+        return availableModels.firstOrNull { m ->
+            val mLow = m.displayName.lowercase().replace("-", " ")
+            m.id.equals(modelName, true) || m.displayName.equals(modelName, true) ||
+                (low.contains("3.8") && mLow.contains("3.8")) ||
+                (low.contains("argon") && mLow.contains("argon")) ||
+                (low.contains("opus") && mLow.contains("opus")) ||
+                (low.contains("sonnet") && mLow.contains("sonnet")) ||
+                (low.contains("gpt") && mLow.contains("gpt"))
+        }
     }
 }

@@ -1,5 +1,7 @@
 # Implementation Plan: Universal Agent Remote (KMP / CMP)
 
+> **Lưu trữ.** Plan khởi tạo dự án. Lộ trình đang dùng nằm trong [plan phiên cha](../ROADMAP.md) và [backlog ba engine](../ROADMAP.md#backlog-triển-khai-ba-engine).
+
 Dự án **`agent-remote`** là ứng dụng di động đa nền tảng (Android, iOS) viết bằng **Kotlin Multiplatform (KMP) & Compose Multiplatform (CMP)** kết nối tới **Gateway Server** trên máy Mac/Linux để điều khiển từ xa các AI Coding Agent (**Antigravity, Claude Code, Codex, Aider**) sử dụng tài khoản đăng nhập chính chủ (không cần API key).
 
 ---

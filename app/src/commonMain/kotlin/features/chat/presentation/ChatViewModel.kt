@@ -1,5 +1,6 @@
 package app.duinch.agentremote.features.chat.presentation
 
+import app.duinch.agentremote.core.data.cache.ConversationCache
 import app.duinch.agentremote.core.domain.model.AgentModel
 import app.duinch.agentremote.core.domain.model.AgentState
 import app.duinch.agentremote.core.domain.model.AgentType
@@ -36,6 +37,9 @@ class ChatViewModel(
     private val initialPrefs = storage.load()
     private val initialModels = initialPrefs.defaultAgent.defaultModels()
     private val initialPermissions = initialPrefs.defaultAgent.permissionModes()
+    private val lastCached = initialPrefs.lastConversationId.takeIf { it.isNotBlank() }?.let {
+        ConversationCache.get(it)
+    }
 
     private val _uiState = MutableStateFlow(
         ChatUiState(
@@ -44,7 +48,12 @@ class ChatViewModel(
             availableModels = initialModels,
             selectedModel = initialModels.firstOrNull { it.id == initialPrefs.lastModelId } ?: initialModels.firstOrNull(),
             availablePermissions = initialPermissions,
-            selectedPermission = initialPrefs.defaultAgent.defaultPermissionMode()
+            selectedPermission = initialPrefs.defaultAgent.defaultPermissionMode(),
+            activeConversationId = initialPrefs.lastConversationId.takeIf { it.isNotBlank() },
+            activeConversationTitle = initialPrefs.lastConversationTitle.takeIf { it.isNotBlank() },
+            activeWorkspace = initialPrefs.lastWorkspace.takeIf { it.isNotBlank() },
+            messages = lastCached?.messages ?: emptyList(),
+            tokenUsage = lastCached?.tokenUsage
         )
     )
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
@@ -67,14 +76,10 @@ class ChatViewModel(
                 previousConnectionStatus = status
                 _uiState.update { it.copy(connectionStatus = status) }
 
-                val prefs = storage.load()
-                if (prefs.notifyConnectionChange && prev != null) {
+                if (storage.load().notifyConnectionChange && prev != null) {
                     when {
                         status is ConnectionStatus.Connected && prev !is ConnectionStatus.Connected ->
-                            PlatformAlertNotifier.notifyConnectionChange(
-                                title = "Đã kết nối Agent Gateway",
-                                message = "Đã kết nối tới máy chủ ${status.host}"
-                            )
+                            PlatformAlertNotifier.notifyConnectionChange("Đã kết nối Agent Gateway", "Đã kết nối tới máy chủ ${status.host}")
                         status is ConnectionStatus.Disconnected && (prev is ConnectionStatus.Connected || prev is ConnectionStatus.Reconnecting) ->
                             PlatformAlertNotifier.notifyConnectionChange("Đã ngắt kết nối", "Đã ngắt kết nối với máy chủ Agent Gateway")
                         status is ConnectionStatus.Error && prev !is ConnectionStatus.Error ->
@@ -108,10 +113,17 @@ class ChatViewModel(
             }
 
             is DomainGatewayEvent.CatalogLoaded -> {
+                ConversationCache.putCatalog(event.catalog.agentType, event.catalog)
                 _uiState.update { ChatStateReducer.applyCatalogLoaded(it, event.catalog) }
             }
 
             is DomainGatewayEvent.AgentStateChanged -> {
+                if (event.state == AgentState.IDLE) {
+                    val s = _uiState.value
+                    s.activeConversationId?.let { id ->
+                        ConversationCache.put(id, s.messages, s.selectedModel?.id, s.tokenUsage)
+                    }
+                }
                 _uiState.update { it.copy(agentState = event.state) }
             }
 
@@ -167,20 +179,11 @@ class ChatViewModel(
             is DomainGatewayEvent.ConversationHistory -> {
                 if (_uiState.value.activeConversationId == event.conversationId) {
                     _uiState.update { s ->
-                        val matched = event.activeModel?.let { name ->
-                            val low = name.lowercase().replace("-", " ")
-                            s.availableModels.firstOrNull { m ->
-                                val mLow = m.displayName.lowercase().replace("-", " ")
-                                m.id.equals(name, true) || m.displayName.equals(name, true) ||
-                                    (low.contains("3.8") && mLow.contains("3.8")) ||
-                                    (low.contains("argon") && mLow.contains("argon")) ||
-                                    (low.contains("opus") && mLow.contains("opus")) ||
-                                    (low.contains("sonnet") && mLow.contains("sonnet")) ||
-                                    (low.contains("gpt") && mLow.contains("gpt"))
-                            }
-                        }
+                        val matched = ChatStateReducer.findMatchingModel(s.availableModels, event.activeModel)
+                        val merged = ChatStateReducer.mergeHistory(s, event.messages, currentAssistantMsgId)
+                        ConversationCache.put(event.conversationId, merged, event.activeModel, event.tokenUsage)
                         s.copy(
-                            messages = ChatStateReducer.mergeHistory(s, event.messages, currentAssistantMsgId),
+                            messages = merged,
                             tokenUsage = event.tokenUsage ?: s.tokenUsage,
                             selectedModel = matched ?: s.selectedModel
                         )
@@ -203,6 +206,7 @@ class ChatViewModel(
             is ChatIntent.SelectConversation -> {
                 val targetAgent = intent.agentType ?: _uiState.value.selectedAgent
                 currentAssistantMsgId = null
+                val cached = ConversationCache.get(intent.conversationId)
                 _uiState.update { current ->
                     ChatStateReducer.syncAgentPermissions(current, targetAgent).copy(
                         selectedAgent = targetAgent,
@@ -211,7 +215,8 @@ class ChatViewModel(
                         activeWorkspace = intent.workspace ?: current.activeWorkspace,
                         agentState = AgentState.IDLE,
                         errorMessage = null,
-                        messages = emptyList()
+                        messages = cached?.messages ?: emptyList(),
+                        tokenUsage = cached?.tokenUsage ?: current.tokenUsage
                     )
                 }
                 val prefs = storage.load()
@@ -428,14 +433,8 @@ class ChatViewModel(
     private fun createAssistantMessage(): String {
         val id = "assistant_${timestamp()}"
         currentAssistantMsgId = id
-        val assistantMsg = ChatMessage(
-            id = id,
-            role = MessageRole.ASSISTANT,
-            content = "",
-            isStreaming = true,
-            timestamp = timestamp()
-        )
-        _uiState.update { it.copy(messages = it.messages + assistantMsg) }
+        val msg = ChatMessage(id = id, role = MessageRole.ASSISTANT, content = "", isStreaming = true, timestamp = timestamp())
+        _uiState.update { it.copy(messages = it.messages + msg) }
         return id
     }
 

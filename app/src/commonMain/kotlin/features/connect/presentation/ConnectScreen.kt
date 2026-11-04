@@ -175,8 +175,7 @@ fun ConnectScreen(
                 .imePadding(),
             contentAlignment = Alignment.TopCenter
         ) {
-            val isMultiColumn = maxWidth >= 860.dp
-            val contentMaxWidth = if (isMultiColumn) 1040.dp else 560.dp
+            val contentMaxWidth = 620.dp
 
             Column(
                 modifier = Modifier
@@ -357,24 +356,9 @@ fun ConnectScreen(
                     }
                 }
 
-                if (isMultiColumn) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(20.dp),
-                        verticalAlignment = Alignment.Top
-                    ) {
-                        Box(modifier = Modifier.weight(1.15f)) {
-                            connectionSlotsContent()
-                        }
-                        Box(modifier = Modifier.weight(0.85f)) {
-                            helperActionsContent()
-                        }
-                    }
-                } else {
-                    connectionSlotsContent()
-                    Spacer(modifier = Modifier.height(18.dp))
-                    helperActionsContent()
-                }
+                connectionSlotsContent()
+                Spacer(modifier = Modifier.height(18.dp))
+                helperActionsContent()
 
                 Spacer(modifier = Modifier.height(28.dp))
             }

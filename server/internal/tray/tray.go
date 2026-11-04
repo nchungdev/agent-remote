@@ -11,7 +11,11 @@ import (
 
 	"app.duinch.agentremote/server/internal/gateway"
 	"github.com/getlantern/systray"
+	_ "embed"
 )
+
+//go:embed icon_solid.png
+var trayIconSolid []byte
 
 type TrayManager struct {
 	server *gateway.Server
@@ -54,7 +58,11 @@ func promptDialog(title, prompt, defaultValue string) (string, error) {
 }
 
 func (t *TrayManager) onReady() {
-	systray.SetTitle("✦")
+	if len(trayIconSolid) > 0 {
+		systray.SetTemplateIcon(trayIconSolid, trayIconSolid)
+	} else {
+		systray.SetTitle("✦")
+	}
 	systray.SetTooltip("Agent Remote Gateway Server")
 
 	// Status Header
