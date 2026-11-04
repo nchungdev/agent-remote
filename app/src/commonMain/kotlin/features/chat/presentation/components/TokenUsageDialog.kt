@@ -2,11 +2,14 @@ package app.duinch.agentremote.features.chat.presentation.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -46,50 +49,69 @@ internal fun CompactTokenGaugeBadge(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    if (tokenUsage == null || tokenUsage.totalTokens == 0) return
-    val pct = tokenUsage.usagePercentage
-    val gaugeColor = when {
-        pct >= 0.90f -> Color(0xFFE05252)
-        pct >= 0.75f -> Color(0xFFE5A93C)
+    val usage = tokenUsage ?: ConversationTokenUsage()
+    val ctxUsedFraction = usage.usagePercentage
+    val fiveHourUsedFraction = ((100 - usage.fiveHourLimitPercent) / 100f).coerceIn(0f, 1f)
+    val weeklyUsedFraction = ((100 - usage.weeklyLimitPercent) / 100f).coerceIn(0f, 1f)
+
+    val ctxColor = when {
+        ctxUsedFraction >= 0.90f -> Color(0xFFE05252)
+        ctxUsedFraction >= 0.70f -> Color(0xFFE5A93C)
         else -> Color(0xFF4EBA74)
     }
-    val label = "${tokenUsage.formattedTotal()} / ${tokenUsage.formattedLimit()}"
+    val fiveHourColor = when {
+        fiveHourUsedFraction >= 0.90f -> Color(0xFFE05252)
+        fiveHourUsedFraction >= 0.70f -> Color(0xFFE5A93C)
+        else -> Color(0xFF4EBA74)
+    }
+    val weeklyColor = when {
+        weeklyUsedFraction >= 0.90f -> Color(0xFFE05252)
+        weeklyUsedFraction >= 0.70f -> Color(0xFFE5A93C)
+        else -> Color(0xFF4EBA74)
+    }
 
     Surface(
-        shape = RoundedCornerShape(10.dp),
+        shape = RoundedCornerShape(7.dp),
         color = Color(0xFF1E1F24),
-        border = BorderStroke(0.5.dp, Color(0xFF2C2D35)),
+        border = BorderStroke(0.6.dp, Color(0xFF2C2D35)),
         modifier = modifier.clickable { onClick() }
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp),
+            modifier = Modifier.padding(horizontal = 7.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(3.5.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Canvas(modifier = Modifier.size(11.dp)) {
-                val strokeWidth = 2.dp.toPx()
-                drawCircle(
-                    color = Color(0xFF33353E),
-                    style = Stroke(width = strokeWidth)
-                )
-                drawArc(
-                    color = gaugeColor,
-                    startAngle = -90f,
-                    sweepAngle = (pct * 360f).coerceAtLeast(6f),
-                    useCenter = false,
-                    style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
-                )
-            }
-            Spacer(modifier = Modifier.width(5.dp))
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontSize = 11.5.sp,
-                    fontWeight = FontWeight.Medium,
-                    fontFamily = FontFamily.Monospace
-                ),
-                color = if (pct >= 0.75f) gaugeColor else Color(0xFFD4D6DC)
-            )
+            // Cột 1: window context used/total
+            VerticalUsageBar(fraction = ctxUsedFraction, color = ctxColor)
+            // Cột 2: usage 5-hours used/total
+            VerticalUsageBar(fraction = fiveHourUsedFraction, color = fiveHourColor)
+            // Cột 3: usage weekly used/total
+            VerticalUsageBar(fraction = weeklyUsedFraction, color = weeklyColor)
         }
+    }
+}
+
+@Composable
+private fun VerticalUsageBar(
+    fraction: Float,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .width(4.5.dp)
+            .height(14.dp)
+            .clip(RoundedCornerShape(1.5.dp))
+            .background(Color(0xFF2B2D36)),
+        contentAlignment = Alignment.BottomCenter
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(fraction.coerceIn(0.10f, 1.0f))
+                .clip(RoundedCornerShape(1.5.dp))
+                .background(color)
+        )
     }
 }
 
@@ -146,8 +168,8 @@ internal fun TokenUsageDetailDialog(
                 UsageQuotaGroup(
                     title = "Gemini Models",
                     rows = listOf(
-                        QuotaRowData("Weekly limit", 51, "5d 10h"),
-                        QuotaRowData("5h limit", 14, "53m")
+                        QuotaRowData("Weekly limit", tokenUsage.weeklyLimitPercent, tokenUsage.weeklyResetTime),
+                        QuotaRowData("5h limit", tokenUsage.fiveHourLimitPercent, tokenUsage.fiveHourResetTime)
                     )
                 )
 

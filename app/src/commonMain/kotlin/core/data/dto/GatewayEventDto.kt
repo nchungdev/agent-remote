@@ -37,7 +37,11 @@ data class TokenUsageDto(
     val cacheReadTokens: Int = 0,
     val outputTokens: Int = 0,
     val totalTokens: Int = 0,
-    val contextLimit: Int = 1000000
+    val contextLimit: Int = 1000000,
+    val fiveHourLimitPercent: Int = 14,
+    val fiveHourResetTime: String = "53m",
+    val weeklyLimitPercent: Int = 51,
+    val weeklyResetTime: String = "5d 10h"
 )
 
 @Serializable

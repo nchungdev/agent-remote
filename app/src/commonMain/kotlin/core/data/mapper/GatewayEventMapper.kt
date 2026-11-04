@@ -77,7 +77,11 @@ object GatewayEventMapper {
                         cacheReadTokens = tu.cacheReadTokens,
                         outputTokens = tu.outputTokens,
                         totalTokens = tu.totalTokens,
-                        contextLimit = tu.contextLimit
+                        contextLimit = tu.contextLimit,
+                        fiveHourLimitPercent = tu.fiveHourLimitPercent,
+                        fiveHourResetTime = tu.fiveHourResetTime,
+                        weeklyLimitPercent = tu.weeklyLimitPercent,
+                        weeklyResetTime = tu.weeklyResetTime
                     )
                 }
                 DomainGatewayEvent.ConversationHistory(

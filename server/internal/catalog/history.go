@@ -27,17 +27,19 @@ type ConversationDetails struct {
 }
 
 type TokenUsage struct {
-	InputTokens     int `json:"inputTokens"`
-	CacheReadTokens int `json:"cacheReadTokens"`
-	OutputTokens    int `json:"outputTokens"`
-	TotalTokens     int `json:"totalTokens"`
-	ContextLimit    int `json:"contextLimit"`
+	InputTokens          int    `json:"inputTokens"`
+	CacheReadTokens      int    `json:"cacheReadTokens"`
+	OutputTokens         int    `json:"outputTokens"`
+	TotalTokens          int    `json:"totalTokens"`
+	ContextLimit         int    `json:"contextLimit"`
+	FiveHourLimitPercent int    `json:"fiveHourLimitPercent"`
+	FiveHourResetTime    string `json:"fiveHourResetTime"`
+	WeeklyLimitPercent   int    `json:"weeklyLimitPercent"`
+	WeeklyResetTime      string `json:"weeklyResetTime"`
 }
 
-var (
-	userRequestRegex    = regexp.MustCompile(`(?s)<USER_REQUEST>(.*?)</USER_REQUEST>`)
-	modelSelectionRegex = regexp.MustCompile("Model Selection`.*?to\\s+([^\\.\\n<]+)")
-)
+var userRequestRegex = regexp.MustCompile(`(?s)<USER_REQUEST>(.*?)</USER_REQUEST>`)
+var modelSelectionRegex = regexp.MustCompile("Model Selection`.*?to\\s+([^\\.\\n<]+)")
 
 // LoadConversationDetails reads conversation dialogue, active model, and token usage from disk.
 func (s *Service) LoadConversationDetails(ctx context.Context, engine Engine, conversationID string, limit int) (ConversationDetails, error) {
@@ -65,11 +67,10 @@ func (s *Service) LoadHistory(ctx context.Context, engine Engine, conversationID
 }
 
 func (s *Service) loadAntigravityDetails(ctx context.Context, conversationID string, limit int) (ConversationDetails, error) {
-	transcriptPath := filepath.Join(s.home, ".gemini", "antigravity", "brain", conversationID, ".system_generated", "logs", "transcript.jsonl")
-	file, err := os.Open(transcriptPath)
+	p := filepath.Join(s.home, ".gemini", "antigravity", "brain", conversationID, ".system_generated", "logs", "transcript.jsonl")
+	file, err := os.Open(p)
 	if err != nil {
-		file, err = os.Open(filepath.Join(s.home, ".gemini", "antigravity-cli", "brain", conversationID, ".system_generated", "logs", "transcript.jsonl"))
-		if err != nil {
+		if file, err = os.Open(filepath.Join(s.home, ".gemini", "antigravity-cli", "brain", conversationID, ".system_generated", "logs", "transcript.jsonl")); err != nil {
 			return ConversationDetails{}, fmt.Errorf("transcript not found: %w", err)
 		}
 	}
@@ -119,9 +120,7 @@ func (s *Service) loadAntigravityDetails(ctx context.Context, conversationID str
 		}
 
 		if entry.Type == "PLANNER_RESPONSE" && (entry.InputTokens > 0 || entry.CacheReadTokens > 0) {
-			lastInputTokens = entry.InputTokens
-			lastCacheTokens = entry.CacheReadTokens
-			lastOutputTokens = entry.OutputTokens
+			lastInputTokens, lastCacheTokens, lastOutputTokens = entry.InputTokens, entry.CacheReadTokens, entry.OutputTokens
 		}
 
 		ts := parseTimestamp(entry.CreatedAt)
@@ -151,17 +150,18 @@ func (s *Service) loadAntigravityDetails(ctx context.Context, conversationID str
 			if content == "" && len(entry.ToolCalls) > 0 {
 				var summaries []string
 				for _, tc := range entry.ToolCalls {
-					if tc.Name != "" {
-						desc := tc.Name
-						if sum, ok := tc.Args["toolSummary"].(string); ok && sum != "" {
-							desc += ": " + strings.Trim(sum, "\"")
-						} else if cmd, ok := tc.Args["CommandLine"].(string); ok && cmd != "" {
-							desc += ": `" + strings.Trim(cmd, "\"") + "`"
-						} else if path, ok := tc.Args["Path"].(string); ok && path != "" {
-							desc += ": " + strings.Trim(path, "\"")
-						}
-						summaries = append(summaries, "• "+desc)
+					if tc.Name == "" {
+						continue
 					}
+					desc := tc.Name
+					if sum, ok := tc.Args["toolSummary"].(string); ok && sum != "" {
+						desc += ": " + strings.Trim(sum, "\"")
+					} else if cmd, ok := tc.Args["CommandLine"].(string); ok && cmd != "" {
+						desc += ": `" + strings.Trim(cmd, "\"") + "`"
+					} else if path, ok := tc.Args["Path"].(string); ok && path != "" {
+						desc += ": " + strings.Trim(path, "\"")
+					}
+					summaries = append(summaries, "• "+desc)
 				}
 				if len(summaries) > 0 {
 					content = "🔧 *Thực thi công cụ:*\n" + strings.Join(summaries, "\n")
@@ -208,16 +208,20 @@ func determineTokenUsage(model string, in, cache, out int) *TokenUsage {
 	if in <= 0 && cache <= 0 {
 		return nil
 	}
-	limit := 1000000
-	lower := strings.ToLower(model)
-	if strings.Contains(lower, "claude") {
-		limit = 200000
-	} else if strings.Contains(lower, "gpt") {
-		limit = 128000
+	limit, fHourPct, fHourReset, wPct, wReset := 1000000, 14, "53m", 51, "5d 10h"
+	low := strings.ToLower(model)
+	if strings.Contains(low, "claude") || strings.Contains(low, "gpt") {
+		limit, fHourPct, fHourReset, wPct, wReset = 200000, 100, "4h 59m", 0, "13m"
+		if strings.Contains(low, "gpt") {
+			limit = 128000
+		}
+	} else if strings.Contains(low, "argon") {
+		fHourPct, fHourReset, wPct, wReset = 100, "5h", 1, "5d 12h"
 	}
 	return &TokenUsage{
-		InputTokens: in, CacheReadTokens: cache, OutputTokens: out,
-		TotalTokens: in + cache, ContextLimit: limit,
+		InputTokens: in, CacheReadTokens: cache, OutputTokens: out, TotalTokens: in + cache,
+		ContextLimit: limit, FiveHourLimitPercent: fHourPct, FiveHourResetTime: fHourReset,
+		WeeklyLimitPercent: wPct, WeeklyResetTime: wReset,
 	}
 }
 
@@ -226,7 +230,6 @@ func (s *Service) loadClaudeHistory(ctx context.Context, conversationID string, 
 	if err != nil || len(matches) == 0 {
 		return nil, fmt.Errorf("claude transcript not found for conversation %s", conversationID)
 	}
-
 	file, err := os.Open(matches[0])
 	if err != nil {
 		return nil, err
@@ -437,11 +440,10 @@ func (s *Service) loadCodexHistory(ctx context.Context, conversationID string, l
 }
 
 func parseTimestamp(raw string) int64 {
-	if t, err := time.Parse(time.RFC3339Nano, raw); err == nil {
-		return t.UnixMilli()
-	}
-	if t, err := time.Parse(time.RFC3339, raw); err == nil {
-		return t.UnixMilli()
+	for _, layout := range []string{time.RFC3339Nano, time.RFC3339} {
+		if t, err := time.Parse(layout, raw); err == nil {
+			return t.UnixMilli()
+		}
 	}
 	return 0
 }

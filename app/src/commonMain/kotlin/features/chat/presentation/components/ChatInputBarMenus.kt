@@ -341,10 +341,10 @@ internal fun ViewUsageMenuItem(
         },
         text = {
             Text(
-                text = "Xem chi tiết Token (View Usage)",
+                text = "View Usage",
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontWeight = FontWeight.Medium,
-                    fontSize = 13.sp
+                    fontSize = 13.5.sp
                 ),
                 color = Color(0xFFD4D6DC)
             )

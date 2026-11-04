@@ -107,10 +107,10 @@ fun ChatInputBar(
 
     var showTokenDialog by remember { mutableStateOf(false) }
 
-    if (showTokenDialog && tokenUsage != null) {
+    if (showTokenDialog) {
         TokenUsageDetailDialog(
             modelName = activeModel?.displayName ?: selectedAgent.displayName,
-            tokenUsage = tokenUsage,
+            tokenUsage = tokenUsage ?: app.duinch.agentremote.core.domain.model.ConversationTokenUsage(),
             onDismiss = { showTokenDialog = false }
         )
     }
@@ -233,13 +233,12 @@ fun ChatInputBar(
                                     modifier = Modifier.weight(1f, fill = false)
                                 )
 
-                                if (tokenUsage != null) {
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    CompactTokenGaugeBadge(
-                                        tokenUsage = tokenUsage,
-                                        onClick = { showTokenDialog = true }
-                                    )
-                                }
+                                Spacer(modifier = Modifier.width(5.dp))
+
+                                CompactTokenGaugeBadge(
+                                    tokenUsage = tokenUsage,
+                                    onClick = { showTokenDialog = true }
+                                )
                             }
 
                             // Right group: Permission Selector + Voice Mic + Send / Stop

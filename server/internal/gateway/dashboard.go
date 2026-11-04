@@ -30,7 +30,7 @@ const dashboardHTMLTemplate = `<!DOCTYPE html>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text-primary); line-height: 1.5; padding: 24px; max-width: 1200px; margin: 0 auto; }
         header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; padding-bottom: 20px; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 16px; }
         .brand { display: flex; align-items: center; gap: 12px; }
-        .brand-icon { width: 40px; height: 40px; background: linear-gradient(135deg, #3B82F6, #8B5CF6); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+        .brand-icon { width: 40px; height: 40px; background: #16171C; border: 1px solid #2C2D35; border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 16px rgba(204, 120, 92, 0.25); }
         .brand-text h1 { font-size: 20px; font-weight: 700; color: #FFF; }
         .brand-text p { font-size: 13px; color: var(--text-secondary); }
         .header-status { display: flex; align-items: center; gap: 10px; }
@@ -69,7 +69,16 @@ const dashboardHTMLTemplate = `<!DOCTYPE html>
 <body>
     <header>
         <div class="brand">
-            <div class="brand-icon">⚡</div>
+            <div class="brand-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="9.5" stroke="#9E5037" stroke-width="1" />
+                    <circle cx="12" cy="12" r="7" stroke="#CC785C" stroke-width="1.2" />
+                    <circle cx="12" cy="4.5" r="1.2" fill="#E5956F" />
+                    <circle cx="18" cy="14" r="1.2" fill="#E5956F" />
+                    <circle cx="6.5" cy="15" r="1.2" fill="#E5956F" />
+                    <path d="M12 9v6M9 12h6M9.9 9.9l4.2 4.2M9.9 14.1l4.2-4.2" stroke="#F3A688" stroke-width="1.8" stroke-linecap="round" />
+                </svg>
+            </div>
             <div class="brand-text">
                 <h1>Agent Remote Server</h1>
                 <p>Server Management & Gateway Dashboard</p>

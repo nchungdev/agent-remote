@@ -5,7 +5,11 @@ data class ConversationTokenUsage(
     val cacheReadTokens: Int = 0,
     val outputTokens: Int = 0,
     val totalTokens: Int = 0,
-    val contextLimit: Int = 1_000_000
+    val contextLimit: Int = 1_000_000,
+    val fiveHourLimitPercent: Int = 14,
+    val fiveHourResetTime: String = "53m",
+    val weeklyLimitPercent: Int = 51,
+    val weeklyResetTime: String = "5d 10h"
 ) {
     val usagePercentage: Float
         get() = if (contextLimit > 0) (totalTokens.toFloat() / contextLimit).coerceIn(0f, 1f) else 0f

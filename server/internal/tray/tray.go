@@ -54,7 +54,7 @@ func promptDialog(title, prompt, defaultValue string) (string, error) {
 }
 
 func (t *TrayManager) onReady() {
-	systray.SetTitle("⚡")
+	systray.SetTitle("✦")
 	systray.SetTooltip("Agent Remote Gateway Server")
 
 	// Status Header

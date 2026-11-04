@@ -170,13 +170,6 @@ fun ChatScreen(
                     }
                 },
                 actions = {
-                    if (state.tokenUsage != null) {
-                        CompactTokenGaugeBadge(
-                            tokenUsage = state.tokenUsage,
-                            onClick = { showTokenDialog = true },
-                            modifier = Modifier.padding(end = 4.dp)
-                        )
-                    }
                     IconButton(
                         onClick = { viewModel.processIntent(ChatIntent.NewConversation) }
                     ) {
