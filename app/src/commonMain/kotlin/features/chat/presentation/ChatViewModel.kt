@@ -162,12 +162,16 @@ class ChatViewModel(
             }
 
             is DomainGatewayEvent.ErrorOccurred -> {
-                _uiState.update { it.copy(errorMessage = event.message) }
+                val currentId = currentAssistantMsgId
+                currentAssistantMsgId = null
+                _uiState.update { ChatStateReducer.applyError(it, currentId, event.message) }
+                _effects.tryEmit(ChatEffect.ShowSnackbar(event.message))
+                _effects.tryEmit(ChatEffect.ScrollToBottom)
             }
 
             is DomainGatewayEvent.ConversationHistory -> {
                 if (_uiState.value.activeConversationId == event.conversationId) {
-                    _uiState.update { it.copy(messages = event.messages) }
+                    _uiState.update { it.copy(messages = ChatStateReducer.mergeHistory(it, event.messages, currentAssistantMsgId)) }
                     _effects.tryEmit(ChatEffect.ScrollToBottom)
                 }
             }
@@ -185,23 +189,31 @@ class ChatViewModel(
             is ChatIntent.SelectPermission -> _uiState.update { it.copy(selectedPermission = intent.mode) }
             is ChatIntent.SelectConversation -> {
                 val targetAgent = intent.agentType ?: _uiState.value.selectedAgent
+                currentAssistantMsgId = null
                 _uiState.update { current ->
                     ChatStateReducer.syncAgentPermissions(current, targetAgent).copy(
+                        selectedAgent = targetAgent,
                         activeConversationId = intent.conversationId,
                         activeConversationTitle = intent.title ?: intent.conversationId.take(8),
                         activeWorkspace = intent.workspace ?: current.activeWorkspace,
+                        agentState = AgentState.IDLE,
+                        errorMessage = null,
                         messages = emptyList()
                     )
                 }
                 scope.launch {
+                    gatewayClient.selectAgent(targetAgent)
                     gatewayClient.requestHistory(intent.conversationId, targetAgent)
                 }
             }
             ChatIntent.NewConversation -> {
+                currentAssistantMsgId = null
                 _uiState.update {
                     it.copy(
                         activeConversationId = null,
                         activeConversationTitle = null,
+                        agentState = AgentState.IDLE,
+                        errorMessage = null,
                         messages = emptyList()
                     )
                 }
@@ -214,17 +226,7 @@ class ChatViewModel(
             }
             is ChatIntent.InputChanged -> _uiState.update { it.copy(inputText = intent.newText) }
             is ChatIntent.AppendVoiceText -> {
-                val spoken = intent.spokenText.trim()
-                if (spoken.isNotEmpty()) {
-                    _uiState.update { current ->
-                        val next = if (current.inputText.isBlank()) {
-                            spoken
-                        } else {
-                            "${current.inputText.trimEnd()} $spoken"
-                        }
-                        current.copy(inputText = next)
-                    }
-                }
+                _uiState.update { ChatStateReducer.appendVoiceText(it, intent.spokenText) }
             }
             is ChatIntent.AttachFile -> attachFile(intent.fileName, intent.bytes)
             is ChatIntent.RemoveAttachment -> {
@@ -355,13 +357,15 @@ class ChatViewModel(
                 agentState = AgentState.THINKING
             )
         }
+        _effects.tryEmit(ChatEffect.ScrollToBottom)
 
         scope.launch {
             val modelId = _uiState.value.selectedModel?.id
             val convId = _uiState.value.activeConversationId
             val permId = _uiState.value.selectedPermission?.id
             val workspace = _uiState.value.activeWorkspace
-            val res = gatewayClient.sendPrompt(text, modelId, convId, permId, workspace)
+            val agent = _uiState.value.selectedAgent
+            val res = gatewayClient.sendPrompt(text, modelId, convId, permId, workspace, agent)
             if (res is AppResult.Failure) {
                 val errMsg = ChatStateReducer.formatDomainError(res.error)
                 _uiState.update { state ->

@@ -92,9 +92,10 @@ class AndroidCompositeGatewayClient(
         model: String?,
         conversationId: String?,
         permissionMode: String?,
-        workspace: String?
+        workspace: String?,
+        agentType: AgentType?
     ): AppResult<Unit, DomainError> =
-        activeClient.sendPrompt(prompt, model, conversationId, permissionMode, workspace)
+        activeClient.sendPrompt(prompt, model, conversationId, permissionMode, workspace, agentType)
 
     override suspend fun uploadFile(
         fileName: String,

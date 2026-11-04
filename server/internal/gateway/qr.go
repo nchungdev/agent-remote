@@ -21,10 +21,20 @@ func getLocalLANIP() string {
 }
 
 func (s *Server) GetQRPayload() string {
+	tunnelURL := s.GetTunnelURL()
 	lanIP := getLocalLANIP()
 	lanAddr := fmt.Sprintf("%s:%d", lanIP, s.GetPort())
-	payload, err := pairing.BuildPairingJSON("agent-remote", s.GetTunnelURL(), "", "", lanAddr)
+	// When Quick Tunnel is active, omit lanAddr in default QR so mobile clients
+	// connect directly via Quick Tunnel instead of forcing LAN Wi-Fi.
+	effectiveLan := lanAddr
+	if tunnelURL != "" {
+		effectiveLan = ""
+	}
+	payload, err := pairing.BuildPairingJSON("agent-remote", tunnelURL, "", "", effectiveLan)
 	if err != nil {
+		if tunnelURL != "" {
+			return fmt.Sprintf(`{"v":1,"app":"agent-remote","url":"%s"}`, tunnelURL)
+		}
 		return fmt.Sprintf(`{"v":1,"app":"agent-remote","lan":"%s"}`, lanAddr)
 	}
 	return payload

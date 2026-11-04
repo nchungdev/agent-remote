@@ -3,6 +3,8 @@ package adapter
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -70,6 +72,49 @@ func agyArgs(opts PromptOptions) []string {
 	return args
 }
 
+func syncAntigravityConversation(convID string) {
+	if convID == "" {
+		return
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return
+	}
+	ideConvDir := filepath.Join(home, ".gemini", "antigravity", "conversations")
+	cliConvDir := filepath.Join(home, ".gemini", "antigravity-cli", "conversations")
+	ideBrainDir := filepath.Join(home, ".gemini", "antigravity", "brain")
+	cliBrainDir := filepath.Join(home, ".gemini", "antigravity-cli", "brain")
+
+	_ = os.MkdirAll(cliConvDir, 0o755)
+	_ = os.MkdirAll(cliBrainDir, 0o755)
+
+	dbName := convID + ".db"
+	ideDB := filepath.Join(ideConvDir, dbName)
+	cliDB := filepath.Join(cliConvDir, dbName)
+
+	if _, err := os.Stat(ideDB); err == nil {
+		if _, err := os.Lstat(cliDB); os.IsNotExist(err) {
+			_ = os.Symlink(ideDB, cliDB)
+		}
+	} else if _, err := os.Stat(cliDB); err == nil {
+		if _, err := os.Lstat(ideDB); os.IsNotExist(err) {
+			_ = os.Symlink(cliDB, ideDB)
+		}
+	}
+
+	ideBrain := filepath.Join(ideBrainDir, convID)
+	cliBrain := filepath.Join(cliBrainDir, convID)
+	if _, err := os.Stat(ideBrain); err == nil {
+		if _, err := os.Lstat(cliBrain); os.IsNotExist(err) {
+			_ = os.Symlink(ideBrain, cliBrain)
+		}
+	} else if _, err := os.Stat(cliBrain); err == nil {
+		if _, err := os.Lstat(ideBrain); os.IsNotExist(err) {
+			_ = os.Symlink(cliBrain, ideBrain)
+		}
+	}
+}
+
 func (a *AntigravityAdapter) HandlePrompt(opts PromptOptions, emit Emitter) {
 	bin := a.binaryPath()
 	if bin == "" {
@@ -81,17 +126,23 @@ func (a *AntigravityAdapter) HandlePrompt(opts PromptOptions, emit Emitter) {
 		return
 	}
 
+	syncAntigravityConversation(opts.ConversationID)
+
 	run := a.begin(emit, fmt.Sprintf("msg_%d", time.Now().UnixMilli()))
 	run.setConversationID(opts.ConversationID)
 	run.emit(protocol.AgentStateEvent(protocol.AgentStateThinking, "Đang xử lý prompt..."))
 
 	activeCalls := make(map[int]string)
+	streamedText := false
 	run.execute("Antigravity", bin, agyArgs(opts), workingDir(opts.Workspace), func(line []byte) {
-		handleAgyLine(run, line, activeCalls)
+		handleAgyLine(run, line, activeCalls, &streamedText)
 	})
+	if cid := run.conversationID; cid != "" {
+		syncAntigravityConversation(cid)
+	}
 }
 
-func handleAgyLine(run *cliRun, line []byte, activeCalls map[int]string) {
+func handleAgyLine(run *cliRun, line []byte, activeCalls map[int]string, streamedText *bool) {
 	var stream agyStreamLine
 	if err := json.Unmarshal(line, &stream); err != nil {
 		trimmed := strings.TrimSpace(string(line))
@@ -136,6 +187,7 @@ func handleAgyLine(run *cliRun, line []byte, activeCalls map[int]string) {
 		}
 
 		if su.StepType == "agent_response" && su.TextDelta != "" {
+			*streamedText = true
 			run.emit(protocol.AgentStateEvent(protocol.AgentStateIdle, ""))
 			run.emit(protocol.TextChunk(su.TextDelta))
 		}
@@ -147,6 +199,10 @@ func handleAgyLine(run *cliRun, line []byte, activeCalls map[int]string) {
 			detail := result.Error
 			if detail == "" {
 				detail = "lượt chạy thất bại"
+			}
+			if *streamedText || result.Response != "" {
+				run.finish()
+				return
 			}
 			run.fail("Antigravity lỗi: " + detail)
 			return

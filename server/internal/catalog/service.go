@@ -78,6 +78,20 @@ func FindBinary(home, name string) string {
 // findBinary returns the first existing executable: PATH first, then well-known install dirs
 // (a menu-bar app does not inherit the shell PATH).
 func findBinary(home, name string, extraDirs ...string) string {
+	if name == "codex" {
+		appCodex := "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
+		if st, err := os.Stat(appCodex); err == nil && !st.IsDir() && st.Mode()&0o111 != 0 {
+			return appCodex
+		}
+	}
+	if name == "claude" {
+		claudeGlob := filepath.Join(home, "Library", "Application Support", "Claude", "claude-code", "*", "*", "claude.app", "Contents", "MacOS", "claude")
+		if matches, _ := filepath.Glob(claudeGlob); len(matches) > 0 {
+			sort.Sort(sort.Reverse(sort.StringSlice(matches)))
+			return matches[0]
+		}
+	}
+
 	if p, err := exec.LookPath(name); err == nil {
 		return p
 	}

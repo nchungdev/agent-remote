@@ -314,6 +314,16 @@ func (h *Hub) handleClientAction(dc *webrtc.DataChannel, msg protocol.ClientMess
 		}
 
 	case "SEND_PROMPT":
+		if msg.AgentType != "" && msg.AgentType != h.currentAgentType {
+			h.mu.Lock()
+			if ad, exists := h.adapters[msg.AgentType]; exists {
+				h.currentAgentType = msg.AgentType
+				h.mu.Unlock()
+				_ = ad.Initialize()
+			} else {
+				h.mu.Unlock()
+			}
+		}
 		prompt := strings.TrimSpace(msg.Prompt)
 		if prompt == "" {
 			emit(protocol.ErrorEvent("Prompt không được để trống"))

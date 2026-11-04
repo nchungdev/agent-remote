@@ -58,25 +58,22 @@ type codexItem struct {
 
 func codexArgs(opts PromptOptions) []string {
 	args := []string{"exec"}
-	if opts.ConversationID != "" {
-		args = append(args, "resume")
-	}
-	args = append(args, "--json")
-	if opts.Model != "" {
-		args = append(args, "--model", opts.Model)
-	}
 	switch opts.PermissionMode {
 	case "read-only":
 		args = append(args, "-s", "read-only")
 	case "workspace-write":
-		args = append(args, "-s", "workspace-write", "-a", "on-request")
+		args = append(args, "-s", "workspace-write")
 	case "approve-for-me":
 		args = append(args, "--approve-for-me")
 	case "full-access":
 		args = append(args, "--dangerously-bypass-approvals-and-sandbox")
 	}
 	if opts.ConversationID != "" {
-		args = append(args, opts.ConversationID)
+		args = append(args, "resume", opts.ConversationID)
+	}
+	args = append(args, "--json")
+	if opts.Model != "" {
+		args = append(args, "--model", opts.Model)
 	}
 	return append(args, "--", opts.Prompt)
 }

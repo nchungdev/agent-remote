@@ -60,7 +60,8 @@ class FakeAgentGatewayClient : AgentGatewayClient {
         model: String?,
         conversationId: String?,
         permissionMode: String?,
-        workspace: String?
+        workspace: String?,
+        agentType: AgentType?
     ): AppResult<Unit, DomainError> {
         sentPrompts.add(prompt)
         return AppResult.Success(Unit)

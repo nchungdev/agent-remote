@@ -257,6 +257,9 @@ func (s *Server) HandleWS(w http.ResponseWriter, r *http.Request) {
 			}()
 
 		case "SEND_PROMPT":
+			if msg.AgentType != "" && msg.AgentType != s.currentAgentType {
+				_ = s.setAdapter(msg.AgentType)
+			}
 			prompt := strings.TrimSpace(msg.Prompt)
 			if prompt == "" {
 				emit(protocol.ErrorEvent("Prompt không được để trống"))

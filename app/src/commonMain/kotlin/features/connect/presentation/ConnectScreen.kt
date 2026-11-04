@@ -62,9 +62,13 @@ fun ConnectScreen(
     val qrScanner = rememberPlatformQrScanner()
     var connectedAtEpochMs by rememberSaveable { mutableStateOf(0L) }
     var hasPrimarySlot by rememberSaveable(currentHost) { mutableStateOf(currentHost.isNotBlank()) }
-    var primarySlotMode by remember {
+    var primarySlotMode by remember(currentHost) {
         mutableStateOf(
-            if (currentHost.contains("trycloudflare.com") || currentHost.startsWith("https://")) ConnectMode.Remote else ConnectMode.Lan
+            if (currentHost.contains("trycloudflare.com") || currentHost.startsWith("https://") || currentHost.startsWith("wss://")) {
+                ConnectMode.Remote
+            } else {
+                ConnectMode.Lan
+            }
         )
     }
     var extraSlots by remember { mutableStateOf(emptyList<AgentConnectionSlot>()) }
@@ -119,10 +123,16 @@ fun ConnectScreen(
     val triggerQrScan = {
         qrScanner.startScan { raw ->
             val parsed = RemoteQrPayloadParser.parse(raw)
-            val target = parsed?.lan?.takeIf { it.isNotBlank() }
-                ?: parsed?.url?.takeIf { it.isNotBlank() }
+            val target = parsed?.url?.takeIf { it.isNotBlank() }
+                ?: parsed?.lan?.takeIf { it.isNotBlank() }
                 ?: raw.trim()
             if (target.isNotBlank()) {
+                val isRemote = target.contains("trycloudflare.com") || target.startsWith("https://") || target.startsWith("wss://")
+                primarySlotMode = if (isRemote) ConnectMode.Remote else ConnectMode.Lan
+                hasPrimarySlot = true
+                if (isRemote) {
+                    recentTunnels = (listOf(target) + recentTunnels).distinct().take(3)
+                }
                 onConnect(target)
             }
         }

@@ -227,8 +227,8 @@ func TestClientFlagValuesAreRejected(t *testing.T) {
 }
 
 func TestCodex_ResumeArgs(t *testing.T) {
-	got := strings.Join(codexArgs(PromptOptions{Prompt: "p", Model: "m", ConversationID: "c"}), " ")
-	if want := "exec resume --json --model m c -- p"; got != want {
+	got := strings.Join(codexArgs(PromptOptions{Prompt: "p", Model: "m", ConversationID: "c", PermissionMode: "workspace-write"}), " ")
+	if want := "exec -s workspace-write resume c --json --model m -- p"; got != want {
 		t.Fatalf("args = %q, want %q", got, want)
 	}
 }

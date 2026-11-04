@@ -41,14 +41,16 @@ data class GatewayActionDto(
             model: String? = null,
             conversationId: String? = null,
             permissionMode: String? = null,
-            workspace: String? = null
+            workspace: String? = null,
+            agentType: String? = null
         ) = GatewayActionDto(
             action = "SEND_PROMPT",
             prompt = promptText,
             model = model,
             conversationId = conversationId,
             permissionMode = permissionMode,
-            workspace = workspace
+            workspace = workspace,
+            agentType = agentType
         )
 
         fun approveTool(callId: String, isApproved: Boolean) =

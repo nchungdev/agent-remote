@@ -175,9 +175,10 @@ class KtorWebSocketClient(
         model: String?,
         conversationId: String?,
         permissionMode: String?,
-        workspace: String?
+        workspace: String?,
+        agentType: AgentType?
     ): AppResult<Unit, DomainError> {
-        return sendAction(GatewayActionDto.sendPrompt(prompt, model, conversationId, permissionMode, workspace))
+        return sendAction(GatewayActionDto.sendPrompt(prompt, model, conversationId, permissionMode, workspace, agentType?.name))
     }
 
     override suspend fun uploadFile(

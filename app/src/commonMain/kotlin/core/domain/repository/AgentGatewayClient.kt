@@ -30,7 +30,8 @@ interface AgentGatewayClient {
         model: String? = null,
         conversationId: String? = null,
         permissionMode: String? = null,
-        workspace: String? = null
+        workspace: String? = null,
+        agentType: AgentType? = null
     ): AppResult<Unit, DomainError>
     suspend fun uploadFile(
         fileName: String,

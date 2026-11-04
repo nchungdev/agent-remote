@@ -2,7 +2,9 @@ package app.duinch.agentremote.features.chat.presentation
 
 import app.duinch.agentremote.core.domain.model.AgentState
 import app.duinch.agentremote.core.domain.model.AgentType
+import app.duinch.agentremote.core.domain.model.ChatMessage
 import app.duinch.agentremote.core.domain.model.EngineCatalog
+import app.duinch.agentremote.core.domain.model.MessageRole
 import app.duinch.agentremote.core.domain.model.ToolCall
 import app.duinch.agentremote.core.domain.model.ToolStatus
 import app.duinch.agentremote.core.domain.result.DomainError
@@ -90,5 +92,38 @@ internal object ChatStateReducer {
         is DomainError.Unauthorized -> err.message
         is DomainError.AgentUnavailable -> "Agent ${err.agentName} không khả dụng"
         is DomainError.Unknown -> err.message
+    }
+
+    fun appendVoiceText(current: ChatUiState, spoken: String): ChatUiState {
+        val trimmed = spoken.trim()
+        if (trimmed.isEmpty()) return current
+        val next = if (current.inputText.isBlank()) trimmed else "${current.inputText.trimEnd()} $trimmed"
+        return current.copy(inputText = next)
+    }
+
+    fun applyError(current: ChatUiState, messageId: String?, errMsg: String): ChatUiState {
+        val next = if (messageId != null) {
+            current.copy(
+                agentState = AgentState.ERROR,
+                messages = current.messages.map { msg ->
+                    if (msg.id == messageId) {
+                        val errContent = if (msg.content.isNotBlank()) "${msg.content}\n\n⚠️ $errMsg" else "⚠️ $errMsg"
+                        msg.copy(content = errContent, isStreaming = false)
+                    } else msg
+                }
+            )
+        } else {
+            current.copy(agentState = AgentState.ERROR)
+        }
+        return next.copy(errorMessage = errMsg)
+    }
+
+    fun mergeHistory(current: ChatUiState, history: List<ChatMessage>, activeMsgId: String?): List<ChatMessage> {
+        return if (activeMsgId != null) {
+            val activeTurn = current.messages.filter { it.isStreaming || it.id == activeMsgId || it.role == MessageRole.USER }
+            history + activeTurn
+        } else {
+            history
+        }
     }
 }
