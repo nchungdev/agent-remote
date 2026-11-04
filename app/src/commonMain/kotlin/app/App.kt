@@ -213,12 +213,13 @@ fun App() {
                                 },
                                 onDisconnect = {
                                     chatViewModel.processIntent(ChatIntent.Disconnect)
+                                    chatViewModel.processIntent(ChatIntent.UrlChanged(""))
                                 },
                                 onOpenSettings = {
                                     previousScreen = currentScreen
                                     currentScreen = AppScreen.SETTINGS
                                 },
-                                modifier = contentMaxWidth
+                                modifier = Modifier.fillMaxSize()
                             )
                         }
 
@@ -234,7 +235,7 @@ fun App() {
                                     previousScreen = currentScreen
                                     currentScreen = AppScreen.SETTINGS
                                 },
-                                modifier = contentMaxWidth
+                                modifier = Modifier.fillMaxSize()
                             )
                         }
 

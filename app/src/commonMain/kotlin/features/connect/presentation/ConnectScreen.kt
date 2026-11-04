@@ -1,5 +1,6 @@
 package app.duinch.agentremote.features.connect.presentation
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,8 +21,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -40,6 +43,9 @@ import androidx.compose.ui.unit.sp
 import app.duinch.agentremote.core.domain.model.ConnectionStatus
 import app.duinch.agentremote.core.presentation.util.currentTimeMillis
 import app.duinch.agentremote.core.presentation.util.rememberPlatformQrScanner
+import app.duinch.agentremote.features.connect.data.LocalServerScanner
+import app.duinch.agentremote.features.connect.domain.model.DiscoveredServer
+import app.duinch.agentremote.features.connect.presentation.DiscoveredServerBanner
 import app.duinch.agentremote.features.settings.data.PlatformSettingsStorage
 import app.duinch.remotetunnel.parser.RemoteQrPayloadParser
 import app.duinch.remotetunnel.ui.ConnectMode
@@ -74,12 +80,20 @@ fun ConnectScreen(
     var extraSlots by remember { mutableStateOf(emptyList<AgentConnectionSlot>()) }
     var nextSlotIndex by remember { mutableStateOf(2) }
     var showAddSlotPicker by remember { mutableStateOf(false) }
+    var discoveredServers by remember { mutableStateOf(emptyList<DiscoveredServer>()) }
     var recentTunnels by remember {
         mutableStateOf(
             PlatformSettingsStorage().load().recentTunnels.ifEmpty {
                 if (currentHost.contains("trycloudflare.com")) listOf(currentHost) else emptyList()
             }
         )
+    }
+
+    LaunchedEffect(Unit) {
+        try {
+            discoveredServers = LocalServerScanner().scan(recentTunnels)
+        } catch (_: Exception) {
+        }
     }
 
     LaunchedEffect(connectionStatus) {
@@ -152,16 +166,29 @@ fun ConnectScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .imePadding()
+                .imePadding(),
+            contentAlignment = Alignment.TopCenter
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .fillMaxWidth()
+                    .widthIn(max = 640.dp)
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp, vertical = 8.dp)
-                    .widthIn(max = 480.dp),
+                    .padding(horizontal = 20.dp, vertical = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                // Hiển thị máy chủ LAN / Cục bộ được tự động dò thấy khi chưa kết nối
+                if (telemetry.state == RemoteConnectionState.Disconnected) {
+                    discoveredServers.forEach { server ->
+                        DiscoveredServerBanner(
+                            server = server,
+                            onConnect = onConnect,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(14.dp))
+                    }
+                }
+
                 // Unified Telemetry Ribbon (Bento Bar) - chỉ hiển thị khi đang kết nối hoặc đã kết nối
                 if (telemetry.state != RemoteConnectionState.Disconnected) {
                     ConnectionTelemetryBar(
@@ -186,9 +213,20 @@ fun ConnectScreen(
                         initialRemoteTarget = initialRemote,
                         telemetry = telemetry,
                         recentTunnels = recentTunnels,
+                        onDeleteRecentTunnel = { deletedUrl ->
+                            recentTunnels = recentTunnels.filterNot { it == deletedUrl }
+                            val prefs = PlatformSettingsStorage()
+                            val cur = prefs.load()
+                            val updatedUrl = if (cur.lastGatewayUrl == deletedUrl) "" else cur.lastGatewayUrl
+                            prefs.save(cur.copy(lastGatewayUrl = updatedUrl, recentTunnels = recentTunnels))
+                        },
                         onClose = {
                             onDisconnect()
                             hasPrimarySlot = false
+                            val prefs = PlatformSettingsStorage()
+                            val cur = prefs.load()
+                            prefs.save(cur.copy(lastGatewayUrl = "", recentTunnels = emptyList()))
+                            recentTunnels = emptyList()
                         },
                         onConnect = { lan, remote ->
                             val isUrl = remote.startsWith("http://") || remote.startsWith("https://") || remote.contains("trycloudflare.com")
@@ -202,6 +240,9 @@ fun ConnectScreen(
                                 if (target.contains("trycloudflare.com")) {
                                     recentTunnels = (listOf(target) + recentTunnels).distinct().take(3)
                                 }
+                                val prefs = PlatformSettingsStorage()
+                                val cur = prefs.load()
+                                prefs.save(cur.copy(lastGatewayUrl = target, recentTunnels = recentTunnels))
                                 onConnect(target)
                             }
                         },
@@ -235,6 +276,13 @@ fun ConnectScreen(
                         initialRemoteTarget = slot.remoteRoomCode,
                         telemetry = slotTelemetry,
                         recentTunnels = recentTunnels,
+                        onDeleteRecentTunnel = { deletedUrl ->
+                            recentTunnels = recentTunnels.filterNot { it == deletedUrl }
+                            val prefs = PlatformSettingsStorage()
+                            val cur = prefs.load()
+                            val updatedUrl = if (cur.lastGatewayUrl == deletedUrl) "" else cur.lastGatewayUrl
+                            prefs.save(cur.copy(lastGatewayUrl = updatedUrl, recentTunnels = recentTunnels))
+                        },
                         onClose = { extraSlots = extraSlots.filterNot { it.id == slot.id } },
                         onConnect = { lan, remote ->
                             val target = if (lan.isNotBlank()) lan else remote
@@ -242,6 +290,9 @@ fun ConnectScreen(
                                 if (target.contains("trycloudflare.com") || target.matches(Regex("""^\d{3}-?\d{3}$"""))) {
                                     recentTunnels = (listOf(target) + recentTunnels).distinct().take(3)
                                 }
+                                val prefs = PlatformSettingsStorage()
+                                val cur = prefs.load()
+                                prefs.save(cur.copy(lastGatewayUrl = target, recentTunnels = recentTunnels))
                                 onConnect(target)
                             }
                         },
@@ -261,6 +312,28 @@ fun ConnectScreen(
                     Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Thêm máy chủ kết nối", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                }
+
+                Spacer(modifier = Modifier.height(28.dp))
+
+                // Feature Highlights card filling void nicely
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    color = Color(0xFF1E1E22),
+                    border = BorderStroke(1.dp, Color(0xFF2E2E34))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "⚡ Đa Kênh Tự Động (Dual-Channel)",
+                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold, color = Color(0xFFEEEEF0))
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "• WebRTC Direct DataChannel: Kết nối P2P độ trễ cực thấp (< 30ms)\n• Cloudflare Quick Tunnel: Vượt NAT / Firewall mọi lúc mọi nơi\n• Tự động kết nối lại khi chuyển đổi Wi-Fi / 4G",
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, color = Color(0xFFA0A0AB), lineHeight = 18.sp)
+                        )
+                    }
                 }
             }
         }

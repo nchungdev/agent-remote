@@ -94,8 +94,8 @@ android {
         applicationId = "app.duinch.agentremote"
         minSdk = 26
         targetSdk = 35
-        versionCode = 8
-        versionName = "0.1.7"
+        versionCode = 9
+        versionName = "0.1.8"
     }
 
     compileOptions {
@@ -127,6 +127,7 @@ compose.desktop {
             macOS {
                 bundleID = "app.duinch.agentremote.desktop"
                 dockName = "Agent Remote"
+                iconFile.set(project.file("src/desktopMain/resources/icon.icns"))
             }
         }
     }

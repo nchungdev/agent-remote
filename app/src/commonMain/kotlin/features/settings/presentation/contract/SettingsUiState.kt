@@ -13,8 +13,8 @@ data class SettingsUiState(
     val notifyConnectionChange: Boolean = true,
     val notifyAgentApproval: Boolean = true,
     val updateStatus: UpdateStatus = UpdateStatus.Idle,
-    val currentVersionName: String = "0.1.7",
-    val currentVersionCode: Int = 8,
+    val currentVersionName: String = "0.1.8",
+    val currentVersionCode: Int = 9,
     val githubRepoOwner: String = "nchungdev",
     val githubRepoName: String = "agent-remote",
     val message: String? = null
