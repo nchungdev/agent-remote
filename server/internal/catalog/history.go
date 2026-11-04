@@ -62,6 +62,10 @@ func (s *Service) loadAntigravityHistory(ctx context.Context, conversationID str
 		Type      string `json:"type"`
 		Content   string `json:"content"`
 		CreatedAt string `json:"created_at"`
+		ToolCalls []struct {
+			Name string         `json:"name"`
+			Args map[string]any `json:"args"`
+		} `json:"tool_calls"`
 	}
 
 	for scanner.Scan() {
@@ -104,13 +108,42 @@ func (s *Service) loadAntigravityHistory(ctx context.Context, conversationID str
 
 		case "PLANNER_RESPONSE":
 			content := strings.TrimSpace(entry.Content)
+			if content == "None" {
+				content = ""
+			}
+			if content == "" && len(entry.ToolCalls) > 0 {
+				var summaries []string
+				for _, tc := range entry.ToolCalls {
+					if tc.Name != "" {
+						desc := tc.Name
+						if sum, ok := tc.Args["toolSummary"].(string); ok && sum != "" {
+							desc += ": " + strings.Trim(sum, "\"")
+						} else if cmd, ok := tc.Args["CommandLine"].(string); ok && cmd != "" {
+							desc += ": `" + strings.Trim(cmd, "\"") + "`"
+						} else if path, ok := tc.Args["Path"].(string); ok && path != "" {
+							desc += ": " + strings.Trim(path, "\"")
+						}
+						summaries = append(summaries, "• "+desc)
+					}
+				}
+				if len(summaries) > 0 {
+					content = "🔧 *Thực thi công cụ:*\n" + strings.Join(summaries, "\n")
+				}
+			}
 			if content != "" {
-				allMessages = append(allMessages, HistoryMessage{
-					ID:          fmt.Sprintf("asst-%d", entry.StepIndex),
-					Role:        "assistant",
-					Content:     content,
-					TimestampMs: ts,
-				})
+				if len(allMessages) > 0 && allMessages[len(allMessages)-1].Role == "assistant" &&
+					strings.HasPrefix(content, "🔧 *Thực thi công cụ:*") &&
+					strings.HasPrefix(allMessages[len(allMessages)-1].Content, "🔧 *Thực thi công cụ:*") {
+					allMessages[len(allMessages)-1].Content += "\n" + strings.TrimPrefix(content, "🔧 *Thực thi công cụ:*\n")
+					allMessages[len(allMessages)-1].TimestampMs = ts
+				} else {
+					allMessages = append(allMessages, HistoryMessage{
+						ID:          fmt.Sprintf("asst-%d", entry.StepIndex),
+						Role:        "assistant",
+						Content:     content,
+						TimestampMs: ts,
+					})
+				}
 			}
 		}
 	}

@@ -46,3 +46,31 @@ func TestLoadAntigravityHistory(t *testing.T) {
 		t.Errorf("msg[3] mismatch: %+v", msgs[3])
 	}
 }
+
+func TestLoadAntigravityHistory_WithToolCalls(t *testing.T) {
+	tmp := t.TempDir()
+	convID := "test-conv-tools"
+	logsDir := filepath.Join(tmp, ".gemini", "antigravity", "brain", convID, ".system_generated", "logs")
+	if err := os.MkdirAll(logsDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	sampleLines := `{"step_index":0,"type":"USER_INPUT","content":"<USER_REQUEST>run something</USER_REQUEST>"}
+{"step_index":1,"type":"PLANNER_RESPONSE","content":null,"tool_calls":[{"name":"run_command","args":{"CommandLine":"ls -la"}}]}
+{"step_index":2,"type":"PLANNER_RESPONSE","content":null,"tool_calls":[{"name":"read_file","args":{"Path":"/tmp/foo.txt"}}]}
+`
+	if err := os.WriteFile(filepath.Join(logsDir, "transcript.jsonl"), []byte(sampleLines), 0644); err != nil {
+		t.Fatal(err)
+	}
+	svc := NewService(tmp, NewAntigravity(tmp))
+	msgs, err := svc.LoadHistory(context.Background(), EngineAntigravity, convID, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(msgs) != 2 {
+		t.Fatalf("expected 2 messages (1 user, 1 merged assistant tool execution), got %d", len(msgs))
+	}
+	if msgs[1].Role != "assistant" {
+		t.Errorf("expected role assistant, got: %s", msgs[1].Role)
+	}
+}

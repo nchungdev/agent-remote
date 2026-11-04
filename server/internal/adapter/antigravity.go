@@ -63,11 +63,11 @@ func agyArgs(opts PromptOptions) []string {
 	if opts.Model != "" {
 		args = append(args, "--model", opts.Model)
 	}
-	switch opts.PermissionMode {
-	case "turbo":
+	if opts.PermissionMode == "plan" {
+		args = append(args, "--mode", "plan")
+	} else {
+		// Non-interactive subprocess requires skip-permissions to execute tools without hanging on stdin
 		args = append(args, "--dangerously-skip-permissions")
-	case "plan", "accept-edits", "auto":
-		args = append(args, "--mode", opts.PermissionMode)
 	}
 	return args
 }
