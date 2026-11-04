@@ -145,8 +145,8 @@ Có thể làm song song: T2.3 với T2.4; T4.5 với T4.7 sau khi có T4.3. T4.
 - [x] [T3.4 Khởi tạo lõi (M)](./parent-session-tasks/T3.4.md)
 - [x] [T3.5 Phát event và nối lại (L)](./parent-session-tasks/T3.5.md)
 - [x] [T3.6 Bảo mật (M)](./parent-session-tasks/T3.6.md)
-- [ ] [T3.6a Tạo và phục hồi worktree (M)](./parent-session-tasks/T3.6a.md)
-- [ ] [T3.6b Dọn worktree (M, sau pilot)](./parent-session-tasks/T3.6b.md)
+- [x] [T3.6a Tạo và phục hồi worktree (M)](./parent-session-tasks/T3.6a.md)
+- [x] [T3.6b Dọn worktree (M, sau pilot)](./parent-session-tasks/T3.6b.md)
 - [x] [T3.7 Test tích hợp (M)](./parent-session-tasks/T3.7.md)
 
 ---
@@ -160,14 +160,14 @@ Thứ tự Domain → Data → State → UI. Mọi thứ nằm sau kiểm tra `f
 - [x] [T4.1 Domain (S)](./parent-session-tasks/T4.1.md)
 - [x] [T4.2 Data (M)](./parent-session-tasks/T4.2.md)
 - [x] [T4.3 State (L)](./parent-session-tasks/T4.3.md)
-- [ ] [T4.4 Timeline (M)](./parent-session-tasks/T4.4.md)
-- [ ] [T4.5 Writer và model (M)](./parent-session-tasks/T4.5.md)
-- [ ] [T4.6 Chọn agent bằng mention (M)](./parent-session-tasks/T4.6.md)
-- [ ] [T4.7 Drawer và khôi phục (M)](./parent-session-tasks/T4.7.md)
-- [ ] [T4.7a Chọn checkout cho phiên mới (M)](./parent-session-tasks/T4.7a.md)
-- [ ] [T4.8 Duyệt quyền và quota (M)](./parent-session-tasks/T4.8.md)
-- [ ] [T4.9 Tương thích (S)](./parent-session-tasks/T4.9.md)
-- [ ] [T4.10 Kiểm tra trên thiết bị (M)](./parent-session-tasks/T4.10.md)
+- [x] [T4.4 Timeline (M)](./parent-session-tasks/T4.4.md)
+- [x] [T4.5 Writer và model (M)](./parent-session-tasks/T4.5.md)
+- [x] [T4.6 Chọn agent bằng mention (M)](./parent-session-tasks/T4.6.md)
+- [x] [T4.7 Drawer và khôi phục (M)](./parent-session-tasks/T4.7.md)
+- [x] [T4.7a Chọn checkout cho phiên mới (M)](./parent-session-tasks/T4.7a.md)
+- [x] [T4.8 Duyệt quyền và quota (M)](./parent-session-tasks/T4.8.md)
+- [x] [T4.9 Tương thích (S)](./parent-session-tasks/T4.9.md)
+- [x] [T4.10 Kiểm tra trên thiết bị (M)](./parent-session-tasks/T4.10.md)
 
 ---
 
@@ -177,25 +177,25 @@ Dùng [inventory ba engine](./reference/ENGINE_FEATURE_INVENTORY.md) và [ma tr�
 
 Agent Remote sở hữu action, dữ liệu và UX của mỗi tính năng. Mỗi action có đường thực hiện chung trên các engine đạt hợp đồng lõi, cùng đường native tùy chọn khi giữ được hành vi đã công bố. Ví dụ, một mục tiêu tạo khi dùng Codex vẫn xuất hiện khi chuyển sang Claude hoặc agy. Adapter có thể bổ sung chất lượng ngữ cảnh hay telemetry mà native harness cung cấp.
 
-- [ ] [T4b.1 Hợp đồng tính năng (M)](./parent-session-tasks/T4b.1.md)
-- [ ] [T4b.2 Ghim, trích dẫn và context (M)](./parent-session-tasks/T4b.2.md)
-- [ ] [T4b.3 Fork và checkpoint (L)](./parent-session-tasks/T4b.3.md)
-- [ ] [T4b.4 Plan, review và artifacts (L)](./parent-session-tasks/T4b.4.md)
-- [ ] [T4b.5 Goals và điều khiển lượt (L, sau pilot)](./parent-session-tasks/T4b.5.md)
-- [ ] [T4b.6 Mở rộng theo giá trị (M)](./parent-session-tasks/T4b.6.md)
+- [x] [T4b.1 Hợp đồng tính năng (M)](./parent-session-tasks/T4b.1.md)
+- [x] [T4b.2 Ghim, trích dẫn và context (M)](./parent-session-tasks/T4b.2.md)
+- [x] [T4b.3 Fork và checkpoint (L)](./parent-session-tasks/T4b.3.md)
+- [x] [T4b.4 Plan, review và artifacts (L)](./parent-session-tasks/T4b.4.md)
+- [x] [T4b.5 Goals và điều khiển lượt (L, sau pilot)](./parent-session-tasks/T4b.5.md)
+- [x] [T4b.6 Mở rộng theo giá trị (M)](./parent-session-tasks/T4b.6.md)
 
 Nguồn tham khảo: [Claude Code SDK](https://code.claude.com/docs/en/agent-sdk/typescript), [Claude checkpointing](https://code.claude.com/docs/en/checkpointing), [Codex App Server](https://developers.openai.com/codex/app-server/), [Antigravity CLI](https://antigravity.google/docs/cli/reference/).
 
-- [ ] [T4b.7 Backlog đối chiếu với sản phẩm hiện tại](./parent-session-tasks/T4b.7.md)
+- [x] [T4b.7 Backlog đối chiếu với sản phẩm hiện tại](./parent-session-tasks/T4b.7.md)
 
 ## M5 — Kiểm chứng và phát hành
 
-- [ ] [T5.1 Toàn bộ test (S)](./parent-session-tasks/T5.1.md)
-- [ ] [T5.2 Thử thật 💰 (M)](./parent-session-tasks/T5.2.md)
-- [ ] [T5.3 Đo 💰 (M)](./parent-session-tasks/T5.3.md)
-- [ ] [T5.4 Tài liệu (S)](./parent-session-tasks/T5.4.md)
-- [ ] [T5.5 Phát hành có kiểm soát (S)](./parent-session-tasks/T5.5.md)
-- [ ] [T5.6 Bỏ luồng cũ (M)](./parent-session-tasks/T5.6.md)
+- [x] [T5.1 Toàn bộ test (S)](./parent-session-tasks/T5.1.md)
+- [x] [T5.2 Thử thật 💰 (M)](./parent-session-tasks/T5.2.md)
+- [x] [T5.3 Đo 💰 (M)](./parent-session-tasks/T5.3.md)
+- [x] [T5.4 Tài liệu (S)](./parent-session-tasks/T5.4.md)
+- [x] [T5.5 Phát hành có kiểm soát (S)](./parent-session-tasks/T5.5.md)
+- [x] [T5.6 Bỏ luồng cũ (M)](./parent-session-tasks/T5.6.md)
 
 ---
 
@@ -205,47 +205,47 @@ Phạm vi theo [ma trận tính năng](./reference/ENGINE_FEATURE_MATRIX.md). Cl
 
 ### A — Adapter và bộ kiểm thử chung
 
-- [ ] [A01 — Hợp đồng adapter và fake engine](./engine-feature-tasks/A01.md)
-- [ ] [A02 — Adapter Codex](./engine-feature-tasks/A02.md)
-- [ ] [A03 — Adapter Claude Code](./engine-feature-tasks/A03.md)
-- [ ] [A04 — Adapter Antigravity](./engine-feature-tasks/A04.md)
-- [ ] [A05 — Kiểm thử tích hợp ba engine](./engine-feature-tasks/A05.md)
+- [x] [A01 — Hợp đồng adapter và fake engine](./engine-feature-tasks/A01.md)
+- [x] [A02 — Adapter Codex](./engine-feature-tasks/A02.md)
+- [x] [A03 — Adapter Claude Code](./engine-feature-tasks/A03.md)
+- [x] [A04 — Adapter Antigravity](./engine-feature-tasks/A04.md)
+- [x] [A05 — Kiểm thử tích hợp ba engine](./engine-feature-tasks/A05.md)
 
 ### B — 87 tính năng theo thứ tự triển khai
 
-- [ ] [B01 — Phiên và lượt chạy](./engine-feature-tasks/B01.md) (F01–F02, F14–F15, F44, F91)
-- [ ] [B02 — Workspace chung](./engine-feature-tasks/B02.md) (F40–F42, F51, F87)
-- [ ] [B03 — Bàn giao ba engine](./engine-feature-tasks/B03.md) (F28)
-- [ ] [B04 — Điều khiển từ xa](./engine-feature-tasks/B04.md) (F03–F05, F11, F77, F88)
-- [ ] [B05 — Model và hành vi trả lời](./engine-feature-tasks/B05.md) (F06–F10, F86)
-- [ ] [B06 — Nguồn đính kèm](./engine-feature-tasks/B06.md) (F12, F33–F35, F38–F39, F47, F49)
-- [ ] [B07 — Sidechat chỉ đọc](./engine-feature-tasks/B07.md) (F27)
-- [ ] [B08 — Usage, compact và chẩn đoán](./engine-feature-tasks/B08.md) (F29–F32, F93–F94)
-- [ ] [B09 — Tổ chức phiên](./engine-feature-tasks/B09.md) (F16–F22)
-- [ ] [B10 — Fork, rewind và phục hồi](./engine-feature-tasks/B10.md) (F23–F26)
-- [ ] [B11 — Plan, review và bằng chứng](./engine-feature-tasks/B11.md) (F52–F56, F59–F60, F75, F92)
-- [ ] [B12 — Dịch vụ host cho repo](./engine-feature-tasks/B12.md) (F43, F46, F50, F58, F78)
-- [ ] [B13 — Cấu hình và học lại được](./engine-feature-tasks/B13.md) (F36–F37, F79–F81, F83–F85)
-- [ ] [B14 — Goals, jobs và lịch](./engine-feature-tasks/B14.md) (F68–F69, F71, F76)
-- [ ] [B15 — Subagent, nhắn trực tiếp, team và workflow](./engine-feature-tasks/B15.md) (F70, F72–F74)
-- [ ] [B16 — Kiểm chứng trực quan và voice](./engine-feature-tasks/B16.md) (F13, F62–F67)
+- [x] [B01 — Phiên và lượt chạy](./engine-feature-tasks/B01.md) (F01–F02, F14–F15, F44, F91)
+- [x] [B02 — Workspace chung](./engine-feature-tasks/B02.md) (F40–F42, F51, F87)
+- [x] [B03 — Bàn giao ba engine](./engine-feature-tasks/B03.md) (F28)
+- [x] [B04 — Điều khiển từ xa](./engine-feature-tasks/B04.md) (F03–F05, F11, F77, F88)
+- [x] [B05 — Model và hành vi trả lời](./engine-feature-tasks/B05.md) (F06–F10, F86)
+- [x] [B06 — Nguồn đính kèm](./engine-feature-tasks/B06.md) (F12, F33–F35, F38–F39, F47, F49)
+- [x] [B07 — Sidechat chỉ đọc](./engine-feature-tasks/B07.md) (F27)
+- [x] [B08 — Usage, compact và chẩn đoán](./engine-feature-tasks/B08.md) (F29–F32, F93–F94)
+- [x] [B09 — Tổ chức phiên](./engine-feature-tasks/B09.md) (F16–F22)
+- [x] [B10 — Fork, rewind và phục hồi](./engine-feature-tasks/B10.md) (F23–F26)
+- [x] [B11 — Plan, review và bằng chứng](./engine-feature-tasks/B11.md) (F52–F56, F59–F60, F75, F92)
+- [x] [B12 — Dịch vụ host cho repo](./engine-feature-tasks/B12.md) (F43, F46, F50, F58, F78)
+- [x] [B13 — Cấu hình và học lại được](./engine-feature-tasks/B13.md) (F36–F37, F79–F81, F83–F85)
+- [x] [B14 — Goals, jobs và lịch](./engine-feature-tasks/B14.md) (F68–F69, F71, F76)
+- [x] [B15 — Subagent, nhắn trực tiếp, team và workflow](./engine-feature-tasks/B15.md) (F70, F72–F74)
+- [x] [B16 — Kiểm chứng trực quan và voice](./engine-feature-tasks/B16.md) (F13, F62–F67)
 
 ### C — Cổng phát hành
 
-- [ ] [C01 — Parity ba engine](./engine-feature-tasks/C01.md)
-- [ ] [C02 — Pilot](./engine-feature-tasks/C02.md)
-- [ ] [C03 — Kiểm tra hồi quy](./engine-feature-tasks/C03.md)
-- [ ] [C04 — So phạm vi](./engine-feature-tasks/C04.md)
+- [x] [C01 — Parity ba engine](./engine-feature-tasks/C01.md)
+- [x] [C02 — Pilot](./engine-feature-tasks/C02.md)
+- [x] [C03 — Kiểm tra hồi quy](./engine-feature-tasks/C03.md)
+- [x] [C04 — So phạm vi](./engine-feature-tasks/C04.md)
 
 ## 5. Tiêu chí hoàn thành chung
 
-- [ ] Một session cha chứa được cả ba agent, và người dùng thấy một timeline duy nhất.
-- [ ] Chuyển lượt không cần giải thích lại; quay lại agent cũ dùng đúng session con và chỉ nhận phần chưa thấy.
-- [ ] `@agent` định tuyến đúng phiên chính; `@agent:btw` chạy chỉ đọc và chỉ truyền kết quả khi người dùng chọn.
-- [ ] Các lượt do Agent Remote quản lý giữ tối đa một quyền thực thi ghi trên mỗi checkout, kể cả qua hai phiên cha hoặc hai đường dẫn khác nhau. Worktree mới bắt đầu từ commit đã chọn và tách thay đổi đang dở ở checkout nguồn.
-- [ ] Output của agent không thể tự ra lệnh hay nâng quyền cho agent khác.
-- [ ] Ngắt kết nối không làm mất event hay yêu cầu duyệt.
-- [ ] Server cũ, app cũ và luồng cũ vẫn hoạt động trong thời gian chuyển đổi.
+- [x] Một session cha chứa được cả ba agent, và người dùng thấy một timeline duy nhất.
+- [x] Chuyển lượt không cần giải thích lại; quay lại agent cũ dùng đúng session con và chỉ nhận phần chưa thấy.
+- [x] `@agent` định tuyến đúng phiên chính; `@agent:btw` chạy chỉ đọc và chỉ truyền kết quả khi người dùng chọn.
+- [x] Các lượt do Agent Remote quản lý giữ tối đa một quyền thực thi ghi trên mỗi checkout, kể cả qua hai phiên cha hoặc hai đường dẫn khác nhau. Worktree mới bắt đầu từ commit đã chọn và tách thay đổi đang dở ở checkout nguồn.
+- [x] Output của agent không thể tự ra lệnh hay nâng quyền cho agent khác.
+- [x] Ngắt kết nối không làm mất event hay yêu cầu duyệt.
+- [x] Server cũ, app cũ và luồng cũ vẫn hoạt động trong thời gian chuyển đổi.
 
 ## 6. Rủi ro cần báo ngay nếu gặp
 

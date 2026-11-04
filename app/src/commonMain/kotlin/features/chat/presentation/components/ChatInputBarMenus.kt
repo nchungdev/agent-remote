@@ -65,15 +65,32 @@ internal val DEFAULT_SLASH_ACTIONS = listOf(
     QuickSlashAction("/clear", "Làm mới khung hội thoại để bắt đầu tác vụ mới", "/clear")
 )
 
+internal data class AgentMentionItem(
+    val mentionTag: String,
+    val agentType: app.duinch.agentremote.core.domain.model.AgentType,
+    val isConsult: Boolean,
+    val description: String
+)
+
+internal val ALL_AGENT_MENTIONS = listOf(
+    AgentMentionItem("@codex", app.duinch.agentremote.core.domain.model.AgentType.CODEX, false, "Tiếp tục công việc chính với Codex"),
+    AgentMentionItem("@codex:btw", app.duinch.agentremote.core.domain.model.AgentType.CODEX, true, "Hỏi bên lề · Chỉ đọc (@agent:btw)"),
+    AgentMentionItem("@claude", app.duinch.agentremote.core.domain.model.AgentType.CLAUDE_CODE, false, "Tiếp tục công việc chính với Claude Code"),
+    AgentMentionItem("@claude:btw", app.duinch.agentremote.core.domain.model.AgentType.CLAUDE_CODE, true, "Hỏi bên lề · Chỉ đọc (@agent:btw)"),
+    AgentMentionItem("@antigravity", app.duinch.agentremote.core.domain.model.AgentType.ANTIGRAVITY, false, "Tiếp tục công việc chính với Antigravity"),
+    AgentMentionItem("@antigravity:btw", app.duinch.agentremote.core.domain.model.AgentType.ANTIGRAVITY, true, "Hỏi bên lề · Chỉ đọc (@agent:btw)")
+)
+
 @Composable
 internal fun ChatInputAutocompletePopup(
     inputText: String,
     matchingSlashActions: List<QuickSlashAction>,
     matchingProjects: List<EngineProject>,
+    matchingAgentMentions: List<AgentMentionItem> = emptyList(),
     onInputChanged: (String) -> Unit,
     onProjectMentionSelected: (EngineProject) -> Unit
 ) {
-    if (matchingSlashActions.isEmpty() && matchingProjects.isEmpty()) return
+    if (matchingSlashActions.isEmpty() && matchingProjects.isEmpty() && matchingAgentMentions.isEmpty()) return
 
     Surface(
         shape = RoundedCornerShape(14.dp),
@@ -112,6 +129,47 @@ internal fun ChatInputAutocompletePopup(
                     Text(
                         text = action.description,
                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                        color = Color(0xFF8A8D96),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            matchingAgentMentions.forEach { mention ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            val prefix = inputText.substringBeforeLast("@")
+                            onInputChanged("$prefix${mention.mentionTag} ")
+                        }
+                        .padding(horizontal = 12.dp, vertical = 7.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val badgeColor = if (mention.isConsult) Color(0xFFCC785C) else Color(0xFF6BA3FF)
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = badgeColor.copy(alpha = 0.15f),
+                        border = BorderStroke(0.5.dp, badgeColor.copy(alpha = 0.4f))
+                    ) {
+                        Text(
+                            text = if (mention.isConsult) "BTW" else mention.agentType.badge,
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, fontWeight = FontWeight.Bold),
+                            color = badgeColor,
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = mention.mentionTag,
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold, fontSize = 13.sp),
+                        color = Color(0xFFF3F4F6)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = mention.description,
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
                         color = Color(0xFF8A8D96),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis

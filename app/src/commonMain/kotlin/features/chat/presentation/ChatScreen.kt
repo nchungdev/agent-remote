@@ -145,6 +145,19 @@ fun ChatScreen(
                             )
                             Spacer(modifier = Modifier.width(7.dp))
                             ConnectionDot(status = state.connectionStatus)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = Color(0xFF23242A),
+                                border = BorderStroke(0.5.dp, Color(0xFF383A46))
+                            ) {
+                                Text(
+                                    text = "Đang làm • ${state.selectedAgent.badge}",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, fontWeight = FontWeight.Bold),
+                                    color = Color(0xFFD4785A),
+                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                )
+                            }
                         }
                         val subLabel = if (workspaceLabel != null) {
                             "${state.selectedAgent.displayName} • $workspaceLabel"

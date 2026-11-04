@@ -97,6 +97,12 @@ fun ChatInputBar(
     val mentionQuery = if (lastToken.startsWith("@")) {
         lastToken.removePrefix("@").lowercase()
     } else null
+    val matchingAgentMentions = remember(mentionQuery) {
+        if (mentionQuery == null) emptyList()
+        else ALL_AGENT_MENTIONS.filter {
+            it.mentionTag.removePrefix("@").lowercase().startsWith(mentionQuery)
+        }
+    }
     val matchingProjects = remember(mentionQuery, availableProjects) {
         if (mentionQuery == null) emptyList()
         else availableProjects.filter { proj ->
@@ -132,6 +138,7 @@ fun ChatInputBar(
             inputText = inputText,
             matchingSlashActions = matchingSlashActions,
             matchingProjects = matchingProjects,
+            matchingAgentMentions = matchingAgentMentions,
             onInputChanged = onInputChanged,
             onProjectMentionSelected = onProjectMentionSelected
         )
