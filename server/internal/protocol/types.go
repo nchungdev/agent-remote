@@ -35,6 +35,7 @@ type ClientMessage struct {
 	AgentType      AgentType `json:"agentType,omitempty"`
 	Model          string    `json:"model,omitempty"`
 	ConversationID string    `json:"conversationId,omitempty"`
+	PermissionMode string    `json:"permissionMode,omitempty"`
 	Workspace      string    `json:"workspace,omitempty"`
 	Prompt         string    `json:"prompt,omitempty"`
 	CallID         string    `json:"callId,omitempty"`

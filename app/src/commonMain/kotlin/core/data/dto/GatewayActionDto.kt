@@ -8,6 +8,8 @@ data class GatewayActionDto(
     val agentType: String? = null,
     val model: String? = null,
     val conversationId: String? = null,
+    val permissionMode: String? = null,
+    val workspace: String? = null,
     val prompt: String? = null,
     val callId: String? = null,
     val approved: Boolean? = null,
@@ -34,13 +36,20 @@ data class GatewayActionDto(
                 limit = limit
             )
 
-        fun sendPrompt(promptText: String, model: String? = null, conversationId: String? = null) =
-            GatewayActionDto(
-                action = "SEND_PROMPT",
-                prompt = promptText,
-                model = model,
-                conversationId = conversationId
-            )
+        fun sendPrompt(
+            promptText: String,
+            model: String? = null,
+            conversationId: String? = null,
+            permissionMode: String? = null,
+            workspace: String? = null
+        ) = GatewayActionDto(
+            action = "SEND_PROMPT",
+            prompt = promptText,
+            model = model,
+            conversationId = conversationId,
+            permissionMode = permissionMode,
+            workspace = workspace
+        )
 
         fun approveTool(callId: String, isApproved: Boolean) =
             GatewayActionDto(action = "APPROVE_TOOL", callId = callId, approved = isApproved)

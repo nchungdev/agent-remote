@@ -39,16 +39,10 @@ class AndroidCompositeGatewayClient(
             activeClient.autoReconnectEnabled = value
         }
 
-    private fun isRoomCode(target: String): Boolean {
-        val clean = target.trim().removePrefix("room:").removePrefix("webrtc://").trim()
-        val digits = clean.replace("-", "")
-        return digits.length == 6 && digits.all { it.isDigit() }
-    }
-
     override suspend fun connect(url: String, token: String?): AppResult<Unit, DomainError> {
         disconnect()
 
-        val selectedClient: AgentGatewayClient = if (isRoomCode(url)) {
+        val selectedClient: AgentGatewayClient = if (url.startsWith("webrtc://") || url.startsWith("p2p://")) {
             WebRtcDataChannelClient(context)
         } else {
             KtorWebSocketClient()
@@ -96,9 +90,17 @@ class AndroidCompositeGatewayClient(
     override suspend fun sendPrompt(
         prompt: String,
         model: String?,
-        conversationId: String?
+        conversationId: String?,
+        permissionMode: String?,
+        workspace: String?
     ): AppResult<Unit, DomainError> =
-        activeClient.sendPrompt(prompt, model, conversationId)
+        activeClient.sendPrompt(prompt, model, conversationId, permissionMode, workspace)
+
+    override suspend fun uploadFile(
+        fileName: String,
+        bytes: ByteArray
+    ): AppResult<String, DomainError> =
+        activeClient.uploadFile(fileName, bytes)
 
     override suspend fun approveTool(callId: String, approved: Boolean): AppResult<Unit, DomainError> =
         activeClient.approveTool(callId, approved)

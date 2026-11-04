@@ -18,8 +18,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.SystemUpdateAlt
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.SystemUpdateAlt
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -93,9 +93,9 @@ fun UpdateCard(
                 ) {
                     Icon(
                         imageVector = if (status is UpdateStatus.UpToDate) {
-                            Icons.Default.CheckCircle
+                            Icons.Outlined.CheckCircle
                         } else {
-                            Icons.Default.SystemUpdateAlt
+                            Icons.Outlined.SystemUpdateAlt
                         },
                         contentDescription = null,
                         tint = if (isHighlight || status is UpdateStatus.UpToDate) {

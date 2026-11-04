@@ -18,7 +18,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -64,7 +64,7 @@ fun ConnectScreen(
     var hasPrimarySlot by rememberSaveable(currentHost) { mutableStateOf(currentHost.isNotBlank()) }
     var primarySlotMode by remember {
         mutableStateOf(
-            if (currentHost.contains("trycloudflare.com") || currentHost.matches(Regex("""^\d{3}-?\d{3}$"""))) ConnectMode.Remote else ConnectMode.Lan
+            if (currentHost.contains("trycloudflare.com") || currentHost.startsWith("https://")) ConnectMode.Remote else ConnectMode.Lan
         )
     }
     var extraSlots by remember { mutableStateOf(emptyList<AgentConnectionSlot>()) }
@@ -106,14 +106,14 @@ fun ConnectScreen(
 
     val initialLan = remember(currentHost) {
         when {
-            currentHost.contains(":") && !currentHost.contains("trycloudflare.com") -> currentHost
-            currentHost.isNotBlank() && !currentHost.contains("trycloudflare.com") && !currentHost.matches(Regex("""^\d{3}-?\d{3}$""")) -> currentHost
+            currentHost.contains(":") && !currentHost.contains("trycloudflare.com") && !currentHost.startsWith("https://") -> currentHost
+            currentHost.isNotBlank() && !currentHost.contains("trycloudflare.com") && !currentHost.startsWith("https://") -> currentHost
             else -> ""
         }
     }
 
     val initialRemote = remember(currentHost) {
-        if (currentHost.contains("trycloudflare.com") || currentHost.matches(Regex("""^\d{3}-?\d{3}$"""))) currentHost else ""
+        if (currentHost.contains("trycloudflare.com") || currentHost.startsWith("https://")) currentHost else ""
     }
 
     val triggerQrScan = {
@@ -121,7 +121,6 @@ fun ConnectScreen(
             val parsed = RemoteQrPayloadParser.parse(raw)
             val target = parsed?.lan?.takeIf { it.isNotBlank() }
                 ?: parsed?.url?.takeIf { it.isNotBlank() }
-                ?: parsed?.roomCode?.takeIf { it.isNotBlank() }
                 ?: raw.trim()
             if (target.isNotBlank()) {
                 onConnect(target)
@@ -190,7 +189,7 @@ fun ConnectScreen(
                                 else -> currentHost
                             }
                             if (target.isNotBlank()) {
-                                if (target.contains("trycloudflare.com") || target.matches(Regex("""^\d{3}-?\d{3}$"""))) {
+                                if (target.contains("trycloudflare.com")) {
                                     recentTunnels = (listOf(target) + recentTunnels).distinct().take(3)
                                 }
                                 onConnect(target)
@@ -249,7 +248,7 @@ fun ConnectScreen(
                     modifier = Modifier.fillMaxWidth().height(48.dp),
                     shape = RoundedCornerShape(14.dp)
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Thêm máy chủ kết nối", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                 }

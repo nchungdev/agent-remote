@@ -13,6 +13,14 @@ import io.ktor.client.HttpClient
 import io.ktor.client.plugins.websocket.DefaultClientWebSocketSession
 import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.client.plugins.websocket.webSocket
+import io.ktor.client.request.forms.MultiPartFormDataContent
+import io.ktor.client.request.forms.formData
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsText
+import io.ktor.http.Headers
+import io.ktor.http.HttpHeaders
+import io.ktor.http.isSuccess
 import io.ktor.websocket.Frame
 import io.ktor.websocket.close
 import io.ktor.websocket.readText
@@ -32,6 +40,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 class KtorWebSocketClient(
     private val httpClient: HttpClient = HttpClient {
@@ -163,9 +173,57 @@ class KtorWebSocketClient(
     override suspend fun sendPrompt(
         prompt: String,
         model: String?,
-        conversationId: String?
+        conversationId: String?,
+        permissionMode: String?,
+        workspace: String?
     ): AppResult<Unit, DomainError> {
-        return sendAction(GatewayActionDto.sendPrompt(prompt, model, conversationId))
+        return sendAction(GatewayActionDto.sendPrompt(prompt, model, conversationId, permissionMode, workspace))
+    }
+
+    override suspend fun uploadFile(
+        fileName: String,
+        bytes: ByteArray
+    ): AppResult<String, DomainError> {
+        val status = _connectionState.value
+        val rawHost = (status as? ConnectionStatus.Connected)?.host
+            ?: return AppResult.Failure(DomainError.Network("Chưa kết nối tới Gateway"))
+        val httpBase = when {
+            rawHost.startsWith("wss://") -> "https://${rawHost.removePrefix("wss://")}"
+            rawHost.startsWith("ws://") -> "http://${rawHost.removePrefix("ws://")}"
+            rawHost.startsWith("http://") || rawHost.startsWith("https://") -> rawHost
+            else -> "http://$rawHost"
+        }.trimEnd('/').removeSuffix("/ws")
+
+        return try {
+            val response = httpClient.post("$httpBase/api/upload") {
+                setBody(
+                    MultiPartFormDataContent(
+                        formData {
+                            append(
+                                key = "file",
+                                value = bytes,
+                                headers = Headers.build {
+                                    append(
+                                        HttpHeaders.ContentDisposition,
+                                        "form-data; name=\"file\"; filename=\"${fileName.replace("\"", "_")}\""
+                                    )
+                                }
+                            )
+                        }
+                    )
+                )
+            }
+            if (!response.status.isSuccess()) {
+                return AppResult.Failure(DomainError.Network("Upload thất bại (${response.status.value})"))
+            }
+            val bodyObj = json.parseToJsonElement(response.bodyAsText()).jsonObject
+            val path = bodyObj["path"]?.jsonPrimitive?.content
+                ?: bodyObj["url"]?.jsonPrimitive?.content
+                ?: fileName
+            AppResult.Success(path)
+        } catch (e: Exception) {
+            AppResult.Failure(DomainError.Network("Lỗi tải tệp lên máy chủ: ${e.message}", e))
+        }
     }
 
     override suspend fun approveTool(callId: String, approved: Boolean): AppResult<Unit, DomainError> {

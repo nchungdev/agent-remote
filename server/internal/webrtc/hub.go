@@ -7,6 +7,7 @@ import (
 	"log"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"app.duinch.agentremote/server/internal/adapter"
 	"app.duinch.agentremote/server/internal/catalog"
@@ -15,21 +16,26 @@ import (
 	"github.com/pion/webrtc/v4"
 )
 
+const FixedSignalingRoom = "default"
+
 type Hub struct {
 	roomCode         string
 	sigHub           *signaling.MessageHub
-	peerConnection   *webrtc.PeerConnection
-	dataChannel      *webrtc.DataChannel
 	sessionID        string
 	currentAgentType protocol.AgentType
 	adapters         map[protocol.AgentType]adapter.Adapter
 	catalog          *catalog.Service
 	mu               sync.Mutex
+	peers            map[string]*webrtc.PeerConnection
+	nextConnID       atomic.Uint64
 	onConnected      func()
 	onDisconnected   func()
 }
 
 func NewHub(roomCode string, sessionID string, adapters map[protocol.AgentType]adapter.Adapter, catalog *catalog.Service, sigHub *signaling.MessageHub) *Hub {
+	if roomCode == "" {
+		roomCode = FixedSignalingRoom
+	}
 	return &Hub{
 		roomCode:         roomCode,
 		sessionID:        sessionID,
@@ -37,6 +43,7 @@ func NewHub(roomCode string, sessionID string, adapters map[protocol.AgentType]a
 		adapters:         adapters,
 		catalog:          catalog,
 		sigHub:           sigHub,
+		peers:            make(map[string]*webrtc.PeerConnection),
 	}
 }
 
@@ -48,42 +55,27 @@ func (h *Hub) SetCallbacks(onConnected, onDisconnected func()) {
 }
 
 func (h *Hub) GetRoomCode() string {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	return h.roomCode
+	return FixedSignalingRoom
 }
 
-func (h *Hub) UpdateRoomCode(newRoom string) {
-	h.mu.Lock()
-	oldRoom := h.roomCode
-	h.roomCode = newRoom
-	sigHub := h.sigHub
-	h.mu.Unlock()
-
-	if sigHub != nil && oldRoom != newRoom {
-		sigHub.Unregister(oldRoom, "host")
-		if ch, err := sigHub.Register(newRoom, "host"); err == nil {
-			go func() {
-				for msg := range ch {
-					h.handleSignal(msg)
-				}
-			}()
-		}
-	}
+func (h *Hub) UpdateRoomCode(_ string) {
+	// Fixed room: no-op for backward compatibility
 }
 
 func (h *Hub) IsConnected() bool {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	if h.peerConnection == nil {
-		return false
+	for _, pc := range h.peers {
+		if pc.ConnectionState() == webrtc.PeerConnectionStateConnected {
+			return true
+		}
 	}
-	return h.peerConnection.ConnectionState() == webrtc.PeerConnectionStateConnected
+	return false
 }
 
 func (h *Hub) Start() error {
 	if h.sigHub != nil {
-		ch, err := h.sigHub.Register(h.roomCode, "host")
+		ch, err := h.sigHub.Register(FixedSignalingRoom, "host")
 		if err == nil {
 			go func() {
 				for msg := range ch {
@@ -92,10 +84,40 @@ func (h *Hub) Start() error {
 			}()
 		}
 	}
-	return h.initPeerConnection()
+	return nil
 }
 
-func (h *Hub) initPeerConnection() error {
+func (h *Hub) handleSignal(msg signaling.SignalMessage) {
+	switch msg.Type {
+	case "offer":
+		h.handleOffer(msg)
+	case "candidate":
+		h.handleCandidate(msg)
+	case "ping":
+		if h.sigHub != nil {
+			h.sigHub.Broadcast(FixedSignalingRoom, signaling.SignalMessage{
+				Type:      "pong",
+				Sender:    "host",
+				Recipient: msg.Sender,
+			})
+		}
+	}
+}
+
+func (h *Hub) handleOffer(msg signaling.SignalMessage) {
+	peerID := msg.Sender
+	if peerID == "" {
+		peerID = "client"
+	}
+	connID := h.nextConnID.Add(1)
+
+	h.mu.Lock()
+	if oldPC := h.peers[peerID]; oldPC != nil && oldPC.ConnectionState() != webrtc.PeerConnectionStateConnected {
+		_ = oldPC.Close()
+		delete(h.peers, peerID)
+	}
+	h.mu.Unlock()
+
 	config := webrtc.Configuration{
 		ICEServers: []webrtc.ICEServer{
 			{URLs: []string{
@@ -107,41 +129,34 @@ func (h *Hub) initPeerConnection() error {
 
 	pc, err := webrtc.NewPeerConnection(config)
 	if err != nil {
-		return fmt.Errorf("không thể tạo webrtc peer connection: %w", err)
+		log.Printf("[WebRTC] Lỗi tạo PeerConnection (peer=%s, conn=%d): %v", peerID, connID, err)
+		return
 	}
 
 	h.mu.Lock()
-	if h.peerConnection != nil {
-		_ = h.peerConnection.Close()
-	}
-	h.peerConnection = pc
+	h.peers[peerID] = pc
 	h.mu.Unlock()
 
-	// ICE Candidate handler -> send via signal hub
 	pc.OnICECandidate(func(c *webrtc.ICECandidate) {
 		if c == nil {
 			return
 		}
-		candidateJSON, err := json.Marshal(c.ToJSON())
+		candJSON, err := json.Marshal(c.ToJSON())
 		if err != nil {
 			return
 		}
-		h.mu.Lock()
-		sigHub := h.sigHub
-		h.mu.Unlock()
-		if sigHub != nil {
-			sigHub.Broadcast(h.roomCode, signaling.SignalMessage{
+		if h.sigHub != nil {
+			h.sigHub.Broadcast(FixedSignalingRoom, signaling.SignalMessage{
 				Type:      "candidate",
 				Sender:    "host",
-				Recipient: "client",
-				Payload:   candidateJSON,
+				Recipient: peerID,
+				Payload:   candJSON,
 			})
 		}
 	})
 
-	// Connection state handler
 	pc.OnConnectionStateChange(func(state webrtc.PeerConnectionState) {
-		log.Printf("[WebRTC] Trạng thái kết nối P2P: %s", state)
+		log.Printf("[WebRTC] Trạng thái P2P (peer=%s, conn=%d): %s", peerID, connID, state)
 		if state == webrtc.PeerConnectionStateConnected {
 			h.mu.Lock()
 			cb := h.onConnected
@@ -151,31 +166,80 @@ func (h *Hub) initPeerConnection() error {
 			}
 		} else if state == webrtc.PeerConnectionStateDisconnected || state == webrtc.PeerConnectionStateFailed || state == webrtc.PeerConnectionStateClosed {
 			h.mu.Lock()
+			if h.peers[peerID] == pc {
+				delete(h.peers, peerID)
+			}
 			cb := h.onDisconnected
 			h.mu.Unlock()
+			_ = pc.Close()
 			if cb != nil {
 				cb()
 			}
 		}
 	})
 
-	// DataChannel listener
 	pc.OnDataChannel(func(dc *webrtc.DataChannel) {
-		log.Printf("[WebRTC] Nhận DataChannel mới từ client: %s", dc.Label())
+		log.Printf("[WebRTC] Nhận DataChannel '%s' từ peer=%s", dc.Label(), peerID)
 		h.setupDataChannel(dc)
 	})
 
-	return nil
+	var sdp webrtc.SessionDescription
+	if err := json.Unmarshal(msg.Payload, &sdp); err != nil {
+		log.Printf("[WebRTC] Lỗi unmarshal SDP offer từ peer=%s: %v", peerID, err)
+		return
+	}
+
+	if err := pc.SetRemoteDescription(sdp); err != nil {
+		log.Printf("[WebRTC] Lỗi set remote description (peer=%s): %v", peerID, err)
+		return
+	}
+
+	answer, err := pc.CreateAnswer(nil)
+	if err != nil {
+		log.Printf("[WebRTC] Lỗi create answer (peer=%s): %v", peerID, err)
+		return
+	}
+
+	if err := pc.SetLocalDescription(answer); err != nil {
+		log.Printf("[WebRTC] Lỗi set local description (peer=%s): %v", peerID, err)
+		return
+	}
+
+	answerJSON, err := json.Marshal(answer)
+	if err != nil {
+		return
+	}
+
+	if h.sigHub != nil {
+		h.sigHub.Broadcast(FixedSignalingRoom, signaling.SignalMessage{
+			Type:      "answer",
+			Sender:    "host",
+			Recipient: peerID,
+			Payload:   answerJSON,
+		})
+	}
+	log.Printf("[WebRTC] Đã gửi SDP Answer tới peer=%s thành công", peerID)
+}
+
+func (h *Hub) handleCandidate(msg signaling.SignalMessage) {
+	peerID := msg.Sender
+	h.mu.Lock()
+	pc := h.peers[peerID]
+	h.mu.Unlock()
+	if pc == nil {
+		return
+	}
+
+	var init webrtc.ICECandidateInit
+	if err := json.Unmarshal(msg.Payload, &init); err != nil {
+		return
+	}
+	_ = pc.AddICECandidate(init)
 }
 
 func (h *Hub) setupDataChannel(dc *webrtc.DataChannel) {
-	h.mu.Lock()
-	h.dataChannel = dc
-	h.mu.Unlock()
-
 	dc.OnOpen(func() {
 		log.Println("[WebRTC] Kênh P2P DataChannel đã mở thành công! Sẵn sàng stream dữ liệu.")
-		// Send initial SESSION_INIT event
 		ad := h.getAdapter()
 		_ = ad.Initialize()
 		initBytes := protocol.SessionInit(h.sessionID, h.currentAgentType, "READY")
@@ -260,6 +324,7 @@ func (h *Hub) handleClientAction(dc *webrtc.DataChannel, msg protocol.ClientMess
 			Prompt:         prompt,
 			Model:          msg.Model,
 			ConversationID: msg.ConversationID,
+			PermissionMode: msg.PermissionMode,
 			Workspace:      msg.Workspace,
 		}
 		go currentAd.HandlePrompt(opts, emit)
@@ -279,78 +344,12 @@ func (h *Hub) handleClientAction(dc *webrtc.DataChannel, msg protocol.ClientMess
 	}
 }
 
-func (h *Hub) handleSignal(msg signaling.SignalMessage) {
-	h.mu.Lock()
-	pc := h.peerConnection
-	sigHub := h.sigHub
-	h.mu.Unlock()
-
-	if pc == nil || sigHub == nil {
-		return
-	}
-
-	switch msg.Type {
-	case "offer":
-		if err := h.initPeerConnection(); err != nil {
-			log.Printf("[WebRTC] Lỗi khởi tạo lại PeerConnection: %v", err)
-			return
-		}
-		h.mu.Lock()
-		pc = h.peerConnection
-		h.mu.Unlock()
-
-		var sdp webrtc.SessionDescription
-		if err := json.Unmarshal(msg.Payload, &sdp); err != nil {
-			log.Printf("[WebRTC] Lỗi unmarshal SDP offer: %v", err)
-			return
-		}
-
-		if err := pc.SetRemoteDescription(sdp); err != nil {
-			log.Printf("[WebRTC] Lỗi set remote description: %v", err)
-			return
-		}
-
-		answer, err := pc.CreateAnswer(nil)
-		if err != nil {
-			log.Printf("[WebRTC] Lỗi create answer: %v", err)
-			return
-		}
-
-		if err := pc.SetLocalDescription(answer); err != nil {
-			log.Printf("[WebRTC] Lỗi set local description: %v", err)
-			return
-		}
-
-		answerJSON, err := json.Marshal(answer)
-		if err != nil {
-			return
-		}
-
-		sigHub.Broadcast(h.roomCode, signaling.SignalMessage{
-			Type:      "answer",
-			Sender:    "host",
-			Recipient: "client",
-			Payload:   answerJSON,
-		})
-		log.Println("[WebRTC] Đã gửi SDP Answer về client thành công")
-
-	case "candidate":
-		var init webrtc.ICECandidateInit
-		if err := json.Unmarshal(msg.Payload, &init); err != nil {
-			return
-		}
-		_ = pc.AddICECandidate(init)
-	}
-}
-
 func (h *Hub) Close() {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	if h.dataChannel != nil {
-		_ = h.dataChannel.Close()
+	for _, pc := range h.peers {
+		_ = pc.Close()
 	}
-	if h.peerConnection != nil {
-		_ = h.peerConnection.Close()
-	}
+	h.peers = make(map[string]*webrtc.PeerConnection)
 }

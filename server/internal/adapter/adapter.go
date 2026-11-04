@@ -8,6 +8,7 @@ type PromptOptions struct {
 	Prompt         string
 	Model          string
 	ConversationID string
+	PermissionMode string
 	Workspace      string
 }
 

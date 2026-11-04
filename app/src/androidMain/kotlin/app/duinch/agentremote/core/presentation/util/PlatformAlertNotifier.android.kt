@@ -6,9 +6,6 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import android.os.Handler
-import android.os.Looper
-import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import app.duinch.agentremote.MainActivity
 
@@ -22,44 +19,29 @@ actual object PlatformAlertNotifier {
     var isAppInForeground: Boolean = true
 
     actual fun notifyConnectionChange(title: String, message: String) {
+        if (isAppInForeground) return
         val ctx = AppContextProvider.context ?: return
-        if (isAppInForeground) {
-            runCatching {
-                Handler(Looper.getMainLooper()).post {
-                    Toast.makeText(ctx, message, Toast.LENGTH_SHORT).show()
-                }
-            }
-        } else {
-            postSystemNotification(
-                context = ctx,
-                channelId = CHANNEL_CONNECTION,
-                channelName = "Trạng thái kết nối Agent",
-                notificationId = NOTIF_ID_CONNECTION,
-                title = title,
-                message = message
-            )
-        }
+        postSystemNotification(
+            context = ctx,
+            channelId = CHANNEL_CONNECTION,
+            channelName = "Trạng thái kết nối Agent",
+            notificationId = NOTIF_ID_CONNECTION,
+            title = title,
+            message = message
+        )
     }
 
     actual fun notifyAgentApproval(toolName: String, description: String) {
+        if (isAppInForeground) return
         val ctx = AppContextProvider.context ?: return
-        val msg = "Agent chờ duyệt quyền: $toolName"
-        if (isAppInForeground) {
-            runCatching {
-                Handler(Looper.getMainLooper()).post {
-                    Toast.makeText(ctx, msg, Toast.LENGTH_SHORT).show()
-                }
-            }
-        } else {
-            postSystemNotification(
-                context = ctx,
-                channelId = CHANNEL_APPROVAL,
-                channelName = "Phê duyệt quyền thực thi Agent",
-                notificationId = NOTIF_ID_APPROVAL,
-                title = "Yêu cầu phê duyệt: $toolName",
-                message = description.ifBlank { "Nhấn để mở ứng dụng và phê duyệt lệnh thực thi." }
-            )
-        }
+        postSystemNotification(
+            context = ctx,
+            channelId = CHANNEL_APPROVAL,
+            channelName = "Phê duyệt quyền thực thi Agent",
+            notificationId = NOTIF_ID_APPROVAL,
+            title = "Yêu cầu phê duyệt: $toolName",
+            message = description.ifBlank { "Nhấn để mở ứng dụng và phê duyệt lệnh thực thi." }
+        )
     }
 
     private fun postSystemNotification(

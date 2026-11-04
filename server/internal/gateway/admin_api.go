@@ -33,6 +33,8 @@ type StatusResponse struct {
 	LANIP         string       `json:"lanIp"`
 	TunnelURL     string       `json:"tunnelUrl"`
 	RoomCode      string       `json:"roomCode"`
+	ServerID      string       `json:"serverId,omitempty"`
+	ServerName    string       `json:"serverName,omitempty"`
 	ActiveClients int          `json:"activeClients"`
 	MemoryAllocMB float64      `json:"memoryAllocMB"`
 	GoVersion     string       `json:"goVersion"`
@@ -78,6 +80,8 @@ func (s *Server) HandleAPIStatus(w http.ResponseWriter, r *http.Request) {
 		LANIP:         getLocalLANIP(),
 		TunnelURL:     s.GetTunnelURL(),
 		RoomCode:      s.GetRoomCode(),
+		ServerID:      s.identity.ID,
+		ServerName:    s.identity.Name,
 		ActiveClients: activeClientsCount,
 		MemoryAllocMB: float64(m.Alloc) / 1024 / 1024,
 		GoVersion:     runtime.Version(),

@@ -13,9 +13,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Lan
-import androidx.compose.material.icons.filled.QrCodeScanner
-import androidx.compose.material.icons.filled.SignalCellularAlt
+import androidx.compose.material.icons.outlined.Lan
+import androidx.compose.material.icons.outlined.QrCodeScanner
+import androidx.compose.material.icons.outlined.SignalCellularAlt
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -65,7 +65,7 @@ fun AddConnectionModeDialog(
                     ModeOptionTile(
                         title = "Quét Mã QR Nhanh",
                         description = "Mở camera quét mã QR trên màn hình máy tính để kết nối ngay",
-                        icon = Icons.Default.QrCodeScanner,
+                        icon = Icons.Outlined.QrCodeScanner,
                         isHighlighted = true,
                         onClick = onScanQrNow
                     )
@@ -73,13 +73,13 @@ fun AddConnectionModeDialog(
                 ModeOptionTile(
                     title = "Cùng Mạng Wi-Fi (LAN)",
                     description = "Tự động dò tìm hoặc nhập trực tiếp địa chỉ IP nội bộ",
-                    icon = Icons.Default.Lan,
+                    icon = Icons.Outlined.Lan,
                     onClick = { onSelectMode(ConnectMode.Lan) }
                 )
                 ModeOptionTile(
                     title = "Mạng Từ Xa (Remote URL)",
-                    description = "Dán đường dẫn Cloudflare Tunnel hoặc nhập mã phòng P2P",
-                    icon = Icons.Default.SignalCellularAlt,
+                    description = "Dán đường dẫn Cloudflare Quick Tunnel hoặc tên miền máy chủ",
+                    icon = Icons.Outlined.SignalCellularAlt,
                     onClick = { onSelectMode(ConnectMode.Remote) }
                 )
             }

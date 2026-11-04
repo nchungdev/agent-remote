@@ -6,12 +6,14 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -24,10 +26,10 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationDrawerItemDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.rememberDrawerState
@@ -121,143 +123,183 @@ fun App() {
     MaterialTheme(colorScheme = darkThemeColors) {
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
             val isCompactScreen = maxWidth < 600.dp
+            val isExpandedTablet = maxWidth >= 760.dp
+            var isTabletSidebarOpen by remember { mutableStateOf(true) }
+
             val drawerModifier = if (isCompactScreen) {
                 Modifier.fillMaxWidth()
             } else {
-                Modifier.width(360.dp)
+                Modifier.width(340.dp)
+            }
+
+            val drawerComposable: @Composable (() -> Unit) -> Unit = { onClose ->
+                ConversationDrawerContent(
+                    selectedAgent = chatState.selectedAgent,
+                    activeConversationId = chatState.activeConversationId,
+                    catalog = chatState.catalogs[chatState.selectedAgent],
+                    connectionStatus = chatState.connectionStatus,
+                    gatewayUrl = chatState.gatewayUrl,
+                    onSelectConversation = { conv ->
+                        chatViewModel.processIntent(
+                            ChatIntent.SelectConversation(
+                                conversationId = conv.id,
+                                title = conv.title,
+                                agentType = chatState.selectedAgent,
+                                workspace = conv.workspace
+                            )
+                        )
+                        currentScreen = AppScreen.CHAT
+                        if (!isExpandedTablet) onClose()
+                    },
+                    onNewConversation = {
+                        chatViewModel.processIntent(ChatIntent.NewConversation)
+                        currentScreen = AppScreen.CHAT
+                        if (!isExpandedTablet) onClose()
+                    },
+                    onRefreshCatalog = {
+                        if (!chatState.connectionStatus.isConnected && chatState.gatewayUrl.isNotBlank()) {
+                            chatViewModel.processIntent(ChatIntent.Connect(chatState.gatewayUrl))
+                        }
+                        chatViewModel.processIntent(ChatIntent.RefreshCatalog)
+                    },
+                    onOpenEngineSelector = {
+                        currentScreen = AppScreen.SELECT_ENGINE
+                        onClose()
+                    },
+                    onOpenConnect = {
+                        currentScreen = AppScreen.CONNECT
+                        onClose()
+                    },
+                    onOpenSettings = {
+                        previousScreen = currentScreen
+                        currentScreen = AppScreen.SETTINGS
+                        onClose()
+                    },
+                    onCloseDrawer = onClose,
+                    modifier = Modifier.fillMaxSize()
+                )
             }
 
             ModalNavigationDrawer(
                 drawerState = drawerState,
-                gesturesEnabled = currentScreen == AppScreen.CHAT,
+                gesturesEnabled = currentScreen == AppScreen.CHAT && !isExpandedTablet,
                 drawerContent = {
-                    ModalDrawerSheet(
-                        modifier = drawerModifier,
-                        drawerContainerColor = Color(0xFF141416),
-                        drawerContentColor = Color(0xFFF4F4F5),
-                        drawerShape = if (isCompactScreen) RectangleShape else RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp)
+                    Surface(
+                        modifier = drawerModifier.fillMaxHeight(),
+                        color = Color(0xFF141416),
+                        contentColor = Color(0xFFF4F4F5),
+                        shape = if (isCompactScreen) RectangleShape else RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp)
                     ) {
-                        ConversationDrawerContent(
-                            selectedAgent = chatState.selectedAgent,
-                            activeConversationId = chatState.activeConversationId,
-                            catalog = chatState.catalogs[chatState.selectedAgent],
-                            connectionStatus = chatState.connectionStatus,
-                            gatewayUrl = chatState.gatewayUrl,
-                            onSelectConversation = { conv ->
-                                chatViewModel.processIntent(
-                                    ChatIntent.SelectConversation(
-                                        conversationId = conv.id,
-                                        title = conv.title,
-                                        agentType = chatState.selectedAgent
-                                    )
-                                )
-                                currentScreen = AppScreen.CHAT
-                                coroutineScope.launch { drawerState.close() }
-                            },
-                            onNewConversation = {
-                                chatViewModel.processIntent(ChatIntent.NewConversation)
-                                currentScreen = AppScreen.CHAT
-                                coroutineScope.launch { drawerState.close() }
-                            },
-                            onRefreshCatalog = {
-                                if (!chatState.connectionStatus.isConnected && chatState.gatewayUrl.isNotBlank()) {
-                                    chatViewModel.processIntent(ChatIntent.Connect(chatState.gatewayUrl))
-                                }
-                                chatViewModel.processIntent(ChatIntent.RefreshCatalog)
-                            },
-                            onOpenEngineSelector = {
-                                currentScreen = AppScreen.SELECT_ENGINE
-                                coroutineScope.launch { drawerState.close() }
-                            },
-                            onOpenConnect = {
-                                currentScreen = AppScreen.CONNECT
-                                coroutineScope.launch { drawerState.close() }
-                            },
-                            onOpenSettings = {
-                                previousScreen = currentScreen
-                                currentScreen = AppScreen.SETTINGS
-                                coroutineScope.launch { drawerState.close() }
-                            },
-                            onCloseDrawer = {
-                                coroutineScope.launch { drawerState.close() }
-                            },
-                            modifier = Modifier.fillMaxSize()
-                        )
+                        drawerComposable { coroutineScope.launch { drawerState.close() } }
                     }
                 }
             ) {
-            when (currentScreen) {
-                AppScreen.CONNECT -> {
-                    ConnectScreen(
-                        currentHost = chatState.gatewayUrl,
-                        connectionStatus = chatState.connectionStatus,
-                        onConnect = { host ->
-                            chatViewModel.processIntent(ChatIntent.UrlChanged(host))
-                            chatViewModel.processIntent(ChatIntent.Connect(host))
-                        },
-                        onDisconnect = {
-                            chatViewModel.processIntent(ChatIntent.Disconnect)
-                        },
-                        onOpenSettings = {
-                            previousScreen = currentScreen
-                            currentScreen = AppScreen.SETTINGS
-                        },
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFF121215)),
+                    contentAlignment = Alignment.TopCenter
+                ) {
+                    val contentMaxWidth = if (isCompactScreen) Modifier.fillMaxSize() else Modifier.widthIn(max = 720.dp).fillMaxSize()
 
-                AppScreen.SELECT_ENGINE -> {
-                    EngineSelectorScreen(
-                        currentAgent = chatState.selectedAgent,
-                        catalogs = chatState.catalogs,
-                        onSelectEngine = { agent ->
-                            chatViewModel.processIntent(ChatIntent.SelectAgent(agent))
-                            currentScreen = AppScreen.CHAT
-                        },
-                        onOpenSettings = {
-                            previousScreen = currentScreen
-                            currentScreen = AppScreen.SETTINGS
-                        },
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
+                    when (currentScreen) {
+                        AppScreen.CONNECT -> {
+                            ConnectScreen(
+                                currentHost = chatState.gatewayUrl,
+                                connectionStatus = chatState.connectionStatus,
+                                onConnect = { host ->
+                                    chatViewModel.processIntent(ChatIntent.UrlChanged(host))
+                                    chatViewModel.processIntent(ChatIntent.Connect(host))
+                                },
+                                onDisconnect = {
+                                    chatViewModel.processIntent(ChatIntent.Disconnect)
+                                },
+                                onOpenSettings = {
+                                    previousScreen = currentScreen
+                                    currentScreen = AppScreen.SETTINGS
+                                },
+                                modifier = contentMaxWidth
+                            )
+                        }
 
-                AppScreen.CHAT -> {
-                    ChatScreen(
-                        viewModel = chatViewModel,
-                        onOpenDrawer = { coroutineScope.launch { drawerState.open() } },
-                        onOpenSettings = {
-                            previousScreen = currentScreen
-                            currentScreen = AppScreen.SETTINGS
-                        },
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
+                        AppScreen.SELECT_ENGINE -> {
+                            EngineSelectorScreen(
+                                currentAgent = chatState.selectedAgent,
+                                catalogs = chatState.catalogs,
+                                onSelectEngine = { agent ->
+                                    chatViewModel.processIntent(ChatIntent.SelectAgent(agent))
+                                    currentScreen = AppScreen.CHAT
+                                },
+                                onOpenSettings = {
+                                    previousScreen = currentScreen
+                                    currentScreen = AppScreen.SETTINGS
+                                },
+                                modifier = contentMaxWidth
+                            )
+                        }
 
-                AppScreen.SETTINGS -> {
-                    SettingsScreen(
-                        viewModel = settingsViewModel,
-                        onBack = { currentScreen = previousScreen },
-                        onOpenConnect = {
-                            previousScreen = currentScreen
-                            currentScreen = AppScreen.CONNECT
-                        },
-                        onOpenEngineSelector = {
-                            previousScreen = currentScreen
-                            currentScreen = AppScreen.SELECT_ENGINE
-                        },
-                        onSelectEngine = { engine ->
-                            chatViewModel.processIntent(ChatIntent.SelectAgent(engine))
-                        },
-                        currentAgent = chatState.selectedAgent,
-                        currentHost = chatState.gatewayUrl,
-                        connectionStatus = chatState.connectionStatus,
-                        modifier = Modifier.fillMaxSize()
-                    )
+                        AppScreen.CHAT -> {
+                            if (isExpandedTablet) {
+                                Row(modifier = Modifier.fillMaxSize()) {
+                                    if (isTabletSidebarOpen) {
+                                        Box(modifier = Modifier.width(300.dp).fillMaxHeight()) {
+                                            drawerComposable { isTabletSidebarOpen = false }
+                                        }
+                                        Box(
+                                            modifier = Modifier
+                                                .width(1.dp)
+                                                .fillMaxHeight()
+                                                .background(Color(0xFF22222A))
+                                        )
+                                    }
+                                    ChatScreen(
+                                        viewModel = chatViewModel,
+                                        onOpenDrawer = { isTabletSidebarOpen = !isTabletSidebarOpen },
+                                        onOpenSettings = {
+                                            previousScreen = currentScreen
+                                            currentScreen = AppScreen.SETTINGS
+                                        },
+                                        modifier = Modifier.weight(1f).fillMaxHeight()
+                                    )
+                                }
+                            } else {
+                                ChatScreen(
+                                    viewModel = chatViewModel,
+                                    onOpenDrawer = { coroutineScope.launch { drawerState.open() } },
+                                    onOpenSettings = {
+                                        previousScreen = currentScreen
+                                        currentScreen = AppScreen.SETTINGS
+                                    },
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                        }
+
+                        AppScreen.SETTINGS -> {
+                            SettingsScreen(
+                                viewModel = settingsViewModel,
+                                onBack = { currentScreen = previousScreen },
+                                onOpenConnect = {
+                                    previousScreen = currentScreen
+                                    currentScreen = AppScreen.CONNECT
+                                },
+                                onOpenEngineSelector = {
+                                    previousScreen = currentScreen
+                                    currentScreen = AppScreen.SELECT_ENGINE
+                                },
+                                onSelectEngine = { engine ->
+                                    chatViewModel.processIntent(ChatIntent.SelectAgent(engine))
+                                },
+                                currentAgent = chatState.selectedAgent,
+                                currentHost = chatState.gatewayUrl,
+                                connectionStatus = chatState.connectionStatus,
+                                modifier = contentMaxWidth
+                            )
+                        }
+                    }
                 }
             }
         }
-    }
 }
 }
 

@@ -32,6 +32,9 @@ func (m *MockAdapter) Initialize() error {
 func (m *MockAdapter) HandlePrompt(opts PromptOptions, emit Emitter) {
 	prompt := opts.Prompt
 	m.mu.Lock()
+	if m.cancelFunc != nil {
+		m.cancelFunc()
+	}
 	m.ctx, m.cancelFunc = context.WithCancel(context.Background())
 	m.approvalCh = make(chan bool, 1)
 	ctx := m.ctx
@@ -57,23 +60,26 @@ func (m *MockAdapter) HandlePrompt(opts PromptOptions, emit Emitter) {
 		}
 	}
 
-	// 2. Tool call requiring approval
+	// 2. Tool call requiring approval (unless auto/turbo permission mode)
 	callID := fmt.Sprintf("tc_%d", time.Now().Unix())
 	m.mu.Lock()
 	m.pendingCall = callID
 	m.mu.Unlock()
 
-	emit(protocol.AgentStateEvent(protocol.AgentStateWaitingApproval, ""))
 	emit(protocol.ToolCall(callID, "run_command", map[string]any{"CommandLine": "git status"}))
-	emit(protocol.ApprovalRequired(callID, "run_command", "Kiểm tra trạng thái Git repository (git status)", false))
 
-	// Wait for approval
-	var approved bool
-	select {
-	case <-ctx.Done():
-		emit(protocol.AgentStateEvent(protocol.AgentStateIdle, ""))
-		return
-	case approved = <-m.approvalCh:
+	approved := true
+	if opts.PermissionMode != "auto" && opts.PermissionMode != "turbo" {
+		emit(protocol.AgentStateEvent(protocol.AgentStateWaitingApproval, ""))
+		emit(protocol.ApprovalRequired(callID, "run_command", "Kiểm tra trạng thái Git repository (git status)", false))
+
+		// Wait for approval
+		select {
+		case <-ctx.Done():
+			emit(protocol.AgentStateEvent(protocol.AgentStateIdle, ""))
+			return
+		case approved = <-m.approvalCh:
+		}
 	}
 
 	if !approved {
@@ -81,7 +87,7 @@ func (m *MockAdapter) HandlePrompt(opts PromptOptions, emit Emitter) {
 		emit(protocol.ToolResult(callID, "run_command", "Lệnh bị người dùng từ chối.", true))
 		emit(protocol.AgentStateEvent(protocol.AgentStateIdle, ""))
 		emit(protocol.TextChunk("Bạn đã hủy thực thi lệnh."))
-		emit(protocol.MessageEnd(msgID))
+		emit(protocol.MessageEnd(msgID, ""))
 		return
 	}
 
@@ -108,7 +114,7 @@ func (m *MockAdapter) HandlePrompt(opts PromptOptions, emit Emitter) {
 		}
 	}
 
-	emit(protocol.MessageEnd(msgID))
+	emit(protocol.MessageEnd(msgID, ""))
 }
 
 func (m *MockAdapter) HandleApproval(callID string, approved bool) {

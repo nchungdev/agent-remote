@@ -28,8 +28,14 @@ interface AgentGatewayClient {
     suspend fun sendPrompt(
         prompt: String,
         model: String? = null,
-        conversationId: String? = null
+        conversationId: String? = null,
+        permissionMode: String? = null,
+        workspace: String? = null
     ): AppResult<Unit, DomainError>
+    suspend fun uploadFile(
+        fileName: String,
+        bytes: ByteArray
+    ): AppResult<String, DomainError> = AppResult.Failure(DomainError.Unknown("Chưa hỗ trợ tải tệp trên kênh này"))
     suspend fun approveTool(callId: String, approved: Boolean): AppResult<Unit, DomainError>
     suspend fun cancelTask(): AppResult<Unit, DomainError>
     suspend fun ping(): AppResult<Unit, DomainError>

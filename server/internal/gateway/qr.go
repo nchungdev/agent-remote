@@ -23,9 +23,9 @@ func getLocalLANIP() string {
 func (s *Server) GetQRPayload() string {
 	lanIP := getLocalLANIP()
 	lanAddr := fmt.Sprintf("%s:%d", lanIP, s.GetPort())
-	payload, err := pairing.BuildPairingJSON("agent-remote", s.GetTunnelURL(), s.GetToken(), s.GetRoomCode(), lanAddr)
+	payload, err := pairing.BuildPairingJSON("agent-remote", s.GetTunnelURL(), "", "", lanAddr)
 	if err != nil {
-		return fmt.Sprintf(`{"v":1,"app":"agent-remote","room":"%s","lan":"%s"}`, s.GetRoomCode(), lanAddr)
+		return fmt.Sprintf(`{"v":1,"app":"agent-remote","lan":"%s"}`, lanAddr)
 	}
 	return payload
 }
@@ -44,7 +44,6 @@ func (s *Server) HandleQRPNG(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) HandleQRPage(w http.ResponseWriter, r *http.Request) {
-	roomCode := s.GetRoomCode()
 	tunnelURL := s.GetTunnelURL()
 	lanIP := getLocalLANIP()
 	lanURL := fmt.Sprintf("ws://%s:%d", lanIP, s.GetPort())
@@ -138,11 +137,6 @@ func (s *Server) HandleQRPage(w http.ResponseWriter, r *http.Request) {
         </div>
 
         <div class="info-pill">
-            <span class="info-label">🔑 P2P Room</span>
-            <span class="info-val">%s</span>
-        </div>
-
-        <div class="info-pill">
             <span class="info-label">☁️ Tunnel</span>
             <span class="info-val" style="color: #93C5FD; font-size: 11px;">%s</span>
         </div>
@@ -155,7 +149,7 @@ func (s *Server) HandleQRPage(w http.ResponseWriter, r *http.Request) {
         <p class="footer-note">Hỗ trợ mạng 4G/5G qua WebRTC P2P & Cloudflare Quick Tunnel.</p>
     </div>
 </body>
-</html>`, time.Now().UnixMilli(), roomCode, tunnelDisplay, lanURL)
+</html>`, time.Now().UnixMilli(), tunnelDisplay, lanURL)
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_, _ = w.Write([]byte(html))

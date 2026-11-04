@@ -55,7 +55,7 @@ object GatewayEventMapper {
                 isError = dto.isError ?: false
             )
 
-            "MESSAGE_END" -> DomainGatewayEvent.MessageCompleted(dto.messageId.orEmpty())
+            "MESSAGE_END" -> DomainGatewayEvent.MessageCompleted(dto.messageId.orEmpty(), dto.conversationId)
 
             "ERROR" -> DomainGatewayEvent.ErrorOccurred(dto.message ?: "Lỗi không xác định")
 

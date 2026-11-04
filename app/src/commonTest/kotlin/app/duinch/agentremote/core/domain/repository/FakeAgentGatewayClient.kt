@@ -58,7 +58,9 @@ class FakeAgentGatewayClient : AgentGatewayClient {
     override suspend fun sendPrompt(
         prompt: String,
         model: String?,
-        conversationId: String?
+        conversationId: String?,
+        permissionMode: String?,
+        workspace: String?
     ): AppResult<Unit, DomainError> {
         sentPrompts.add(prompt)
         return AppResult.Success(Unit)

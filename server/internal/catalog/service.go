@@ -70,6 +70,11 @@ func capConversations(c EngineCatalog, limit int) EngineCatalog {
 	return c
 }
 
+// FindBinary locates an agent CLI the same way the catalog does.
+func FindBinary(home, name string) string {
+	return findBinary(home, name)
+}
+
 // findBinary returns the first existing executable: PATH first, then well-known install dirs
 // (a menu-bar app does not inherit the shell PATH).
 func findBinary(home, name string, extraDirs ...string) string {

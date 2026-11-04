@@ -17,7 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -123,7 +123,7 @@ fun SettingsNavigationRow(
         }
         Spacer(modifier = Modifier.width(8.dp))
         Icon(
-            imageVector = Icons.Default.ChevronRight,
+            imageVector = Icons.Outlined.ChevronRight,
             contentDescription = null,
             tint = Color(0xFF71717A),
             modifier = Modifier.size(20.dp)

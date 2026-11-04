@@ -10,23 +10,26 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Code
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Lightbulb
-import androidx.compose.material.icons.filled.Terminal
+import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.Code
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.ExpandMore
+import androidx.compose.material.icons.outlined.Terminal
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -43,6 +46,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.duinch.agentremote.core.domain.model.ToolCall
@@ -56,22 +60,18 @@ fun ExecutionTraceView(
     modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp)
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        // 1. Thinking / Thought blocks
         if (!thinking.isNullOrBlank()) {
             TraceThinkingItem(thought = thinking, isStreaming = isStreaming)
         }
 
-        // 2. Tool call steps (reading file, running command, editing file)
         toolCalls.forEach { tool ->
             TraceToolItem(toolCall = tool)
         }
 
-        // 3. Live active working indicator
-        if (isStreaming) {
+        if (isStreaming && thinking.isNullOrBlank() && toolCalls.isEmpty()) {
             LiveWorkingIndicator()
         }
     }
@@ -82,39 +82,43 @@ private fun TraceThinkingItem(
     thought: String,
     isStreaming: Boolean
 ) {
+    // Collapsed by default — flat, borderless inline row like Antigravity / Claude / Codex
     var isExpanded by remember { mutableStateOf(false) }
 
-    val charCount = thought.length
-    val label = if (isStreaming && charCount < 100) "Thinking..." else "Thought (${charCount} chars)"
+    val transition = rememberInfiniteTransition()
+    val pulseAlpha by transition.animateFloat(
+        initialValue = 0.5f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(800),
+            repeatMode = RepeatMode.Reverse
+        )
+    )
 
-    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+    val label = if (isStreaming) "Đang suy nghĩ..." else "Suy nghĩ"
+
+    Column(modifier = Modifier.fillMaxWidth()) {
         Row(
-            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .clickable { isExpanded = !isExpanded }
-                .padding(vertical = 2.dp)
+                .padding(vertical = 3.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Default.Lightbulb,
-                contentDescription = null,
-                tint = Color(0xFF94A3B8),
-                modifier = Modifier.size(14.dp)
-            )
-            Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = label,
                 style = MaterialTheme.typography.bodySmall.copy(
-                    fontSize = 12.5.sp,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Medium
                 ),
-                color = Color(0xFFA1A1AA)
+                color = Color(0xFF8E8E93),
+                modifier = if (isStreaming) Modifier.alpha(pulseAlpha) else Modifier
             )
-            Spacer(modifier = Modifier.width(4.dp))
+            Spacer(modifier = Modifier.width(3.dp))
             Icon(
-                imageVector = if (isExpanded) Icons.Default.ExpandMore else Icons.Default.ChevronRight,
-                contentDescription = null,
+                imageVector = if (isExpanded) Icons.Outlined.ExpandMore else Icons.Outlined.ChevronRight,
+                contentDescription = if (isExpanded) "Thu gọn" else "Mở rộng",
                 tint = Color(0xFF71717A),
-                modifier = Modifier.size(14.dp)
+                modifier = Modifier.size(15.dp)
             )
         }
 
@@ -123,22 +127,28 @@ private fun TraceThinkingItem(
             enter = expandVertically(),
             exit = shrinkVertically()
         ) {
-            Surface(
-                shape = RoundedCornerShape(6.dp),
-                color = Color(0xFF18181B),
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 20.dp, top = 4.dp, bottom = 4.dp)
+                    .padding(start = 4.dp, top = 4.dp, bottom = 6.dp)
+                    .height(IntrinsicSize.Min)
             ) {
+                // Thin 1dp vertical timeline line (no surrounding box)
+                Box(
+                    modifier = Modifier
+                        .width(1.5.dp)
+                        .fillMaxHeight()
+                        .background(Color(0xFF2E2E34))
+                )
+                Spacer(modifier = Modifier.width(12.dp))
                 Text(
-                    text = thought,
+                    text = thought.trim(),
                     style = MaterialTheme.typography.bodySmall.copy(
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 11.sp,
-                        lineHeight = 15.sp
+                        fontSize = 13.5.sp,
+                        lineHeight = 20.sp
                     ),
-                    color = Color(0xFFCBD5E1),
-                    modifier = Modifier.padding(8.dp)
+                    color = Color(0xFF8E8E93),
+                    modifier = Modifier.weight(1f)
                 )
             }
         }
@@ -148,36 +158,49 @@ private fun TraceThinkingItem(
 @Composable
 private fun TraceToolItem(toolCall: ToolCall) {
     var isExpanded by remember { mutableStateOf(false) }
+    val (icon, title) = parseToolDisplay(toolCall)
+    val isRunning = toolCall.status == ToolStatus.RUNNING || toolCall.status == ToolStatus.PENDING_APPROVAL
 
-    val (icon, title, iconTint) = parseToolDisplay(toolCall)
+    val transition = rememberInfiniteTransition()
+    val pulseAlpha by transition.animateFloat(
+        initialValue = 0.45f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(750),
+            repeatMode = RepeatMode.Reverse
+        )
+    )
 
-    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+    Column(modifier = Modifier.fillMaxWidth()) {
         Row(
-            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .clickable { isExpanded = !isExpanded }
-                .padding(vertical = 2.dp)
+                .padding(vertical = 3.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = iconTint,
+                tint = Color(0xFF71717A),
                 modifier = Modifier.size(14.dp)
             )
-            Spacer(modifier = Modifier.width(6.dp))
+            Spacer(modifier = Modifier.width(7.dp))
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodySmall.copy(
-                    fontSize = 12.5.sp,
-                    fontFamily = FontFamily.Monospace
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Normal
                 ),
-                color = Color(0xFFE4E4E7)
+                color = if (toolCall.status == ToolStatus.FAILED) Color(0xFFEF4444) else Color(0xFF8E8E93),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = if (isRunning) Modifier.alpha(pulseAlpha) else Modifier
             )
-            Spacer(modifier = Modifier.width(4.dp))
+            Spacer(modifier = Modifier.width(3.dp))
             Icon(
-                imageVector = if (isExpanded) Icons.Default.ExpandMore else Icons.Default.ChevronRight,
+                imageVector = if (isExpanded) Icons.Outlined.ExpandMore else Icons.Outlined.ChevronRight,
                 contentDescription = null,
-                tint = Color(0xFF71717A),
+                tint = Color(0xFF63636B),
                 modifier = Modifier.size(14.dp)
             )
         }
@@ -187,34 +210,48 @@ private fun TraceToolItem(toolCall: ToolCall) {
             enter = expandVertically(),
             exit = shrinkVertically()
         ) {
-            Surface(
-                shape = RoundedCornerShape(6.dp),
-                color = Color(0xFF18181B),
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 20.dp, top = 4.dp, bottom = 4.dp)
+                    .padding(start = 4.dp, top = 4.dp, bottom = 6.dp)
+                    .height(IntrinsicSize.Min)
             ) {
-                Column(modifier = Modifier.padding(8.dp)) {
-                    if (toolCall.argsJson.isNotBlank()) {
-                        Text(
-                            text = "Parameters:\n${toolCall.argsJson}",
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                fontFamily = FontFamily.Monospace,
-                                fontSize = 10.sp
-                            ),
-                            color = Color(0xFF94A3B8)
-                        )
-                    }
-                    if (!toolCall.result.isNullOrBlank()) {
-                        Text(
-                            text = "Output:\n${toolCall.result}",
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                fontFamily = FontFamily.Monospace,
-                                fontSize = 10.sp
-                            ),
-                            color = if (toolCall.status == ToolStatus.FAILED) Color(0xFFEF4444) else Color(0xFFCBD5E1),
-                            modifier = Modifier.padding(top = 4.dp)
-                        )
+                Box(
+                    modifier = Modifier
+                        .width(1.5.dp)
+                        .fillMaxHeight()
+                        .background(Color(0xFF2E2E34))
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = Color(0xFF141418),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Column(modifier = Modifier.padding(10.dp)) {
+                        if (toolCall.argsJson.isNotBlank()) {
+                            Text(
+                                text = toolCall.argsJson,
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontFamily = FontFamily.Monospace,
+                                    fontSize = 11.5.sp,
+                                    lineHeight = 16.sp
+                                ),
+                                color = Color(0xFF8E8E93)
+                            )
+                        }
+                        if (!toolCall.result.isNullOrBlank()) {
+                            Text(
+                                text = toolCall.result,
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontFamily = FontFamily.Monospace,
+                                    fontSize = 11.5.sp,
+                                    lineHeight = 17.sp
+                                ),
+                                color = if (toolCall.status == ToolStatus.FAILED) Color(0xFFEF4444) else Color(0xFFA1A1AA),
+                                modifier = Modifier.padding(top = if (toolCall.argsJson.isNotBlank()) 6.dp else 0.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -222,37 +259,32 @@ private fun TraceToolItem(toolCall: ToolCall) {
     }
 }
 
-private fun parseToolDisplay(tool: ToolCall): Triple<ImageVector, String, Color> {
+private fun parseToolDisplay(tool: ToolCall): Pair<ImageVector, String> {
     val name = tool.toolName.lowercase()
     val args = tool.argsJson
 
     return when {
         name.contains("command") || name.contains("terminal") || name.contains("bash") -> {
             val cmd = extractJsonField(args, "CommandLine") ?: extractJsonField(args, "command") ?: "command"
-            val shortCmd = if (cmd.length > 40) cmd.take(37) + "..." else cmd
-            val label = when (tool.status) {
-                ToolStatus.RUNNING -> "Running $shortCmd..."
-                ToolStatus.FAILED -> "Ran $shortCmd · Exited with error"
-                else -> "Ran $shortCmd"
+            val shortCmd = if (cmd.length > 42) cmd.take(39) + "..." else cmd
+            val prefix = if (tool.status == ToolStatus.RUNNING || tool.status == ToolStatus.PENDING_APPROVAL) {
+                "Đang chạy"
+            } else {
+                "Đã chạy"
             }
-            Triple(Icons.Default.Terminal, label, Color(0xFFA855F7))
+            Icons.Outlined.Terminal to "$prefix $shortCmd"
         }
-
         name.contains("read") || name.contains("view") -> {
             val path = extractJsonField(args, "Path") ?: extractJsonField(args, "path") ?: "file"
             val fileName = path.substringAfterLast('/').substringAfterLast('\\')
-            Triple(Icons.Default.Description, "Reading $fileName", Color(0xFF60A5FA))
+            Icons.Outlined.Description to "Đọc tệp $fileName"
         }
-
         name.contains("edit") || name.contains("write") || name.contains("replace") -> {
             val path = extractJsonField(args, "Path") ?: extractJsonField(args, "path") ?: "file"
             val fileName = path.substringAfterLast('/').substringAfterLast('\\')
-            Triple(Icons.Default.Code, "Editing $fileName", Color(0xFF34D399))
+            Icons.Outlined.Code to "Chỉnh sửa $fileName"
         }
-
-        else -> {
-            Triple(Icons.Default.Code, "${tool.toolName}()", Color(0xFF94A3B8))
-        }
+        else -> Icons.Outlined.Code to tool.toolName
     }
 }
 
@@ -268,29 +300,29 @@ private fun LiveWorkingIndicator() {
         initialValue = 0.4f,
         targetValue = 1.0f,
         animationSpec = infiniteRepeatable(
-            animation = tween(800),
+            animation = tween(750),
             repeatMode = RepeatMode.Reverse
         )
     )
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.padding(vertical = 4.dp)
+        modifier = Modifier.padding(vertical = 3.dp)
     ) {
         Box(
             modifier = Modifier
-                .size(7.dp)
+                .size(6.dp)
                 .alpha(alpha)
-                .background(Color(0xFF3B82F6), CircleShape)
+                .background(Color(0xFF8E8E93), CircleShape)
         )
-        Spacer(modifier = Modifier.width(6.dp))
+        Spacer(modifier = Modifier.width(8.dp))
         Text(
-            text = "Working",
+            text = "Đang xử lý...",
             style = MaterialTheme.typography.bodySmall.copy(
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.Medium
             ),
-            color = Color(0xFF94A3B8),
+            color = Color(0xFF8E8E93),
             modifier = Modifier.alpha(alpha)
         )
     }

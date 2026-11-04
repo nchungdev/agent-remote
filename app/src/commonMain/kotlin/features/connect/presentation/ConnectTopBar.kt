@@ -3,7 +3,7 @@ package app.duinch.agentremote.features.connect.presentation
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.outlined.QrCodeScanner
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -52,7 +52,7 @@ fun ConnectTopBar(
         actions = {
             IconButton(onClick = onScanQr) {
                 Icon(
-                    imageVector = Icons.Default.QrCodeScanner,
+                    imageVector = Icons.Outlined.QrCodeScanner,
                     contentDescription = "Quét mã QR",
                     tint = Color(0xFFE4E4E7),
                     modifier = Modifier.size(21.dp)

@@ -7,6 +7,12 @@ import app.duinch.agentremote.core.domain.model.ApprovalRequest
 import app.duinch.agentremote.core.domain.model.ChatMessage
 import app.duinch.agentremote.core.domain.model.ConnectionStatus
 import app.duinch.agentremote.core.domain.model.EngineCatalog
+import app.duinch.agentremote.core.domain.model.PermissionMode
+
+data class AttachedFileItem(
+    val fileName: String,
+    val remotePath: String
+)
 
 data class ChatUiState(
     val messages: List<ChatMessage> = emptyList(),
@@ -15,9 +21,14 @@ data class ChatUiState(
     val selectedAgent: AgentType = AgentType.ANTIGRAVITY,
     val selectedModel: AgentModel? = null,
     val availableModels: List<AgentModel> = emptyList(),
+    val selectedPermission: PermissionMode? = null,
+    val availablePermissions: List<PermissionMode> = emptyList(),
     val catalogs: Map<AgentType, EngineCatalog> = emptyMap(),
     val activeConversationId: String? = null,
     val activeConversationTitle: String? = null,
+    val activeWorkspace: String? = null,
+    val attachedFiles: List<AttachedFileItem> = emptyList(),
+    val isUploadingAttachment: Boolean = false,
     val pendingApproval: ApprovalRequest? = null,
     val inputText: String = "",
     val gatewayUrl: String = "",
@@ -25,5 +36,8 @@ data class ChatUiState(
     val errorMessage: String? = null
 ) {
     val canSendPrompt: Boolean
-        get() = connectionStatus.isConnected && !agentState.isBusy && inputText.isNotBlank()
+        get() = connectionStatus.isConnected &&
+            !agentState.isBusy &&
+            !isUploadingAttachment &&
+            (inputText.isNotBlank() || attachedFiles.isNotEmpty())
 }

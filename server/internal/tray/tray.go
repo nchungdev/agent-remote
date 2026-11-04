@@ -72,8 +72,6 @@ func (t *TrayManager) onReady() {
 	// Quick Copy & Tunnel actions
 	mToggleTunnel := systray.AddMenuItem("⚡ Start Cloudflare Tunnel", "Start on-demand Cloudflare Quick Tunnel")
 	mTunnel := systray.AddMenuItem("Copy Cloudflare URL", "Copy ephemeral public URL")
-	roomCode := t.server.GetRoomCode()
-	mRoom := systray.AddMenuItem(fmt.Sprintf("Copy P2P Code (%s)", roomCode), "Copy WebRTC P2P Room Code")
 	lanIP := getLocalLANIP()
 	mLAN := systray.AddMenuItem(fmt.Sprintf("Copy LAN Address (%s)", lanIP), "Copy local WebSocket URL")
 
@@ -144,9 +142,6 @@ func (t *TrayManager) onReady() {
 						}
 					}()
 				}
-
-			case <-mRoom.ClickedCh:
-				copyToClipboard(t.server.GetRoomCode())
 
 			case <-mTunnel.ClickedCh:
 				url := t.server.GetTunnelURL()

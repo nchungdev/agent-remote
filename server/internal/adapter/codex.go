@@ -1,38 +1,22 @@
 package adapter
 
 import (
-	"bufio"
-	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"sync"
+	"log"
+	"strings"
 	"time"
 
 	"app.duinch.agentremote/server/internal/protocol"
 )
 
 type CodexAdapter struct {
-	mu         sync.Mutex
-	binaryPath string
-	ctx        context.Context
-	cancelFunc context.CancelFunc
-	stdinPipe  io.WriteCloser
+	cliRunner
+	binaryPath func() string
 }
 
 func NewCodexAdapter() *CodexAdapter {
-	home, _ := os.UserHomeDir()
-	bin, err := exec.LookPath("codex")
-	if err != nil {
-		candidate := filepath.Join(home, ".local", "bin", "codex")
-		if _, statErr := os.Stat(candidate); statErr == nil {
-			bin = candidate
-		}
-	}
-	return &CodexAdapter{binaryPath: bin}
+	return &CodexAdapter{binaryPath: func() string { return findCLI("codex") }}
 }
 
 func (c *CodexAdapter) AgentType() protocol.AgentType {
@@ -40,143 +24,171 @@ func (c *CodexAdapter) AgentType() protocol.AgentType {
 }
 
 func (c *CodexAdapter) Initialize() error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if c.binaryPath == "" {
-		home, _ := os.UserHomeDir()
-		bin, err := exec.LookPath("codex")
-		if err != nil {
-			candidate := filepath.Join(home, ".local", "bin", "codex")
-			if _, statErr := os.Stat(candidate); statErr == nil {
-				bin = candidate
-			}
-		}
-		c.binaryPath = bin
-	}
 	return nil
 }
 
-type codexJsonLine struct {
-	Type    string `json:"type"`
-	Payload struct {
-		Text    string `json:"text,omitempty"`
-		Role    string `json:"role,omitempty"`
-		Content []struct {
-			Text string `json:"text,omitempty"`
-		} `json:"content,omitempty"`
-	} `json:"payload,omitempty"`
+// codexEvent is one `codex exec --json` line.
+type codexEvent struct {
+	Type     string `json:"type"`
+	ThreadID string `json:"thread_id"`
+	Message  string `json:"message"`
+	Error    *struct {
+		Message string `json:"message"`
+	} `json:"error"`
+	Item *codexItem `json:"item"`
 }
 
-func (c *CodexAdapter) HandlePrompt(opts PromptOptions, emit Emitter) {
-	c.mu.Lock()
-	bin := c.binaryPath
-	if bin == "" {
-		c.mu.Unlock()
-		emit(protocol.ErrorEvent("Không tìm thấy lệnh 'codex' trên máy Mac."))
-		return
-	}
+type codexItem struct {
+	ID               string `json:"id"`
+	Type             string `json:"type"`
+	Text             string `json:"text"`
+	Message          string `json:"message"`
+	Command          string `json:"command"`
+	AggregatedOutput string `json:"aggregated_output"`
+	ExitCode         *int   `json:"exit_code"`
+	Status           string `json:"status"`
+	Server           string `json:"server"`
+	Tool             string `json:"tool"`
+	Query            string `json:"query"`
+	Changes          []struct {
+		Path string `json:"path"`
+		Kind string `json:"kind"`
+	} `json:"changes"`
+}
 
-	if c.cancelFunc != nil {
-		c.cancelFunc()
-	}
-	c.ctx, c.cancelFunc = context.WithCancel(context.Background())
-	ctx := c.ctx
-	c.mu.Unlock()
-
-	var args []string
+func codexArgs(opts PromptOptions) []string {
+	args := []string{"exec"}
 	if opts.ConversationID != "" {
-		args = []string{"exec", "resume", opts.ConversationID, opts.Prompt, "--json"}
-	} else {
-		args = []string{"exec", opts.Prompt, "--json"}
+		args = append(args, "resume")
 	}
-
+	args = append(args, "--json")
 	if opts.Model != "" {
 		args = append(args, "--model", opts.Model)
 	}
-
-	cmd := exec.CommandContext(ctx, bin, args...)
-	if opts.Workspace != "" {
-		cmd.Dir = opts.Workspace
+	switch opts.PermissionMode {
+	case "read-only":
+		args = append(args, "-s", "read-only")
+	case "workspace-write":
+		args = append(args, "-s", "workspace-write", "-a", "on-request")
+	case "approve-for-me":
+		args = append(args, "--approve-for-me")
+	case "full-access":
+		args = append(args, "--dangerously-bypass-approvals-and-sandbox")
 	}
-
-	stdin, _ := cmd.StdinPipe()
-	c.mu.Lock()
-	c.stdinPipe = stdin
-	c.mu.Unlock()
-
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		emit(protocol.ErrorEvent(fmt.Sprintf("Không thể mở stdout pipe: %v", err)))
-		return
+	if opts.ConversationID != "" {
+		args = append(args, opts.ConversationID)
 	}
-	cmd.Stderr = os.Stderr
-
-	emit(protocol.AgentStateEvent(protocol.AgentStateThinking, "Codex đang phân tích..."))
-
-	if err := cmd.Start(); err != nil {
-		emit(protocol.ErrorEvent(fmt.Sprintf("Lỗi khởi động codex: %v", err)))
-		return
-	}
-
-	scanner := bufio.NewScanner(stdout)
-	scanner.Buffer(make([]byte, 256*1024), 2*1024*1024)
-	msgID := fmt.Sprintf("codex_%d", time.Now().UnixMilli())
-
-	for scanner.Scan() {
-		raw := scanner.Bytes()
-		var line codexJsonLine
-		if err := json.Unmarshal(raw, &line); err != nil {
-			// fallback raw text line
-			emit(protocol.TextChunk(string(raw) + "\n"))
-			continue
-		}
-
-		if line.Payload.Text != "" {
-			emit(protocol.AgentStateEvent(protocol.AgentStateIdle, ""))
-			emit(protocol.TextChunk(line.Payload.Text))
-		} else if len(line.Payload.Content) > 0 {
-			for _, item := range line.Payload.Content {
-				if item.Text != "" {
-					emit(protocol.AgentStateEvent(protocol.AgentStateIdle, ""))
-					emit(protocol.TextChunk(item.Text))
-				}
-			}
-		}
-	}
-
-	_ = cmd.Wait()
-	emit(protocol.AgentStateEvent(protocol.AgentStateIdle, ""))
-	emit(protocol.MessageEnd(msgID))
+	return append(args, "--", opts.Prompt)
 }
 
-func (c *CodexAdapter) HandleApproval(callID string, approved bool) {
-	c.mu.Lock()
-	pipe := c.stdinPipe
-	cancel := c.cancelFunc
-	c.mu.Unlock()
-
-	if !approved {
-		if pipe != nil {
-			_, _ = pipe.Write([]byte("n\n"))
-		}
-		if cancel != nil {
-			cancel()
-		}
+func (c *CodexAdapter) HandlePrompt(opts PromptOptions, emit Emitter) {
+	bin := c.binaryPath()
+	if bin == "" {
+		c.begin(emit, fmt.Sprintf("codex_%d", time.Now().UnixMilli())).fail("Không tìm thấy lệnh 'codex' trên máy Mac.")
 		return
 	}
-	if pipe != nil {
-		_, _ = pipe.Write([]byte("y\n"))
+	if err := validateOptions(opts); err != nil {
+		c.begin(emit, fmt.Sprintf("codex_%d", time.Now().UnixMilli())).fail(err.Error())
+		return
+	}
+
+	run := c.begin(emit, fmt.Sprintf("codex_%d", time.Now().UnixMilli()))
+	run.setConversationID(opts.ConversationID)
+	run.emit(protocol.AgentStateEvent(protocol.AgentStateThinking, "Codex đang phân tích..."))
+	run.execute("Codex", bin, codexArgs(opts), workingDir(opts.Workspace), func(line []byte) {
+		handleCodexLine(run, line)
+	})
+}
+
+func handleCodexLine(run *cliRun, line []byte) {
+	var event codexEvent
+	if err := json.Unmarshal(line, &event); err != nil {
+		log.Printf("[Codex] Bỏ qua dòng không phải JSON: %s", line)
+		return
+	}
+	switch event.Type {
+	case "thread.started":
+		run.setConversationID(event.ThreadID)
+	case "item.started":
+		if event.Item != nil {
+			emitCodexToolStart(run, event.Item)
+		}
+	case "item.completed":
+		if event.Item != nil {
+			emitCodexItem(run, event.Item)
+		}
+	case "turn.completed":
+		// The process lingers for seconds after this; the client should not wait on it.
+		run.finish()
+	case "turn.failed":
+		run.fail(codexErrorText(event))
 	}
 }
 
-func (c *CodexAdapter) Cancel() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if c.cancelFunc != nil {
-		c.cancelFunc()
+func emitCodexItem(run *cliRun, item *codexItem) {
+	switch item.Type {
+	case "agent_message":
+		run.emit(protocol.AgentStateEvent(protocol.AgentStateIdle, ""))
+		run.emit(protocol.TextChunk(item.Text))
+	case "reasoning":
+		run.emit(protocol.ThinkingChunk(item.Text))
+	case "error":
+		log.Printf("[Codex] Cảnh báo: %s", item.Message) // Non-fatal: real failures arrive as turn.failed.
+	case "command_execution", "file_change", "mcp_tool_call", "web_search":
+		isError := item.Status == "failed" || (item.ExitCode != nil && *item.ExitCode != 0)
+		run.emit(protocol.ToolResult(item.ID, codexToolName(item), item.AggregatedOutput, isError))
 	}
 }
 
-func (c *CodexAdapter) Close() {
-	c.Cancel()
+func emitCodexToolStart(run *cliRun, item *codexItem) {
+	var args map[string]any
+	switch item.Type {
+	case "command_execution":
+		args = map[string]any{"command": item.Command}
+	case "web_search":
+		args = map[string]any{"query": item.Query}
+	case "file_change":
+		paths := make([]string, 0, len(item.Changes))
+		for _, change := range item.Changes {
+			paths = append(paths, change.Path)
+		}
+		args = map[string]any{"paths": paths}
+	case "mcp_tool_call":
+		args = map[string]any{}
+	default:
+		return
+	}
+	run.emit(protocol.AgentStateEvent(protocol.AgentStateExecutingTool, codexToolName(item)))
+	run.emit(protocol.ToolCall(item.ID, codexToolName(item), args))
+}
+
+func codexToolName(item *codexItem) string {
+	switch item.Type {
+	case "command_execution":
+		return "shell"
+	case "mcp_tool_call":
+		return item.Server + "." + item.Tool
+	default:
+		return item.Type
+	}
+}
+
+// codexErrorText unwraps API failures, which nest a JSON document inside the message.
+func codexErrorText(event codexEvent) string {
+	text := event.Message
+	if event.Error != nil && event.Error.Message != "" {
+		text = event.Error.Message
+	}
+	var nested struct {
+		Error struct {
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	if strings.HasPrefix(strings.TrimSpace(text), "{") && json.Unmarshal([]byte(text), &nested) == nil && nested.Error.Message != "" {
+		text = nested.Error.Message
+	}
+	if text == "" {
+		text = "lượt chạy thất bại"
+	}
+	return "Codex lỗi: " + text
 }

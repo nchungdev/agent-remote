@@ -1,7 +1,9 @@
 package app.duinch.agentremote.features.chat.presentation
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,12 +18,15 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -30,6 +35,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -40,15 +46,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.duinch.agentremote.core.domain.model.ConnectionStatus
+import app.duinch.agentremote.core.presentation.components.ArcReactorEmblem
 import app.duinch.agentremote.core.presentation.util.isKeyboardVisible
+import app.duinch.agentremote.core.presentation.util.rememberPlatformFilePicker
+import app.duinch.agentremote.core.presentation.util.rememberPlatformVoiceInput
 import app.duinch.agentremote.features.chat.presentation.components.ApprovalCard
 import app.duinch.agentremote.features.chat.presentation.components.ChatInputBar
 import app.duinch.agentremote.features.chat.presentation.components.ChatMessageBubble
@@ -88,10 +99,22 @@ fun ChatScreen(
         }
     }
 
+    val currentModelName = state.selectedModel?.displayName
+        ?: state.availableModels.firstOrNull()?.displayName
+        ?: state.selectedAgent.defaultModels().firstOrNull()?.displayName
+        ?: "Mặc định"
+
+    val launchFilePicker = rememberPlatformFilePicker { fileName, bytes ->
+        viewModel.processIntent(ChatIntent.AttachFile(fileName, bytes))
+    }
+    val launchVoiceInput = rememberPlatformVoiceInput { spokenText ->
+        viewModel.processIntent(ChatIntent.AppendVoiceText(spokenText))
+    }
+    val workspaceLabel = state.activeWorkspace?.substringAfterLast('/')?.takeIf { it.isNotBlank() }
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = Color(0xFF141416),
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = Color(0xFF121215),
         topBar = {
             TopAppBar(
                 title = {
@@ -103,24 +126,22 @@ fun ChatScreen(
                                     fontWeight = FontWeight.SemiBold,
                                     fontSize = 16.sp
                                 ),
-                                color = Color(0xFFF4F4F5),
+                                color = Color(0xFFF5F4F0),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Spacer(modifier = Modifier.width(7.dp))
                             ConnectionDot(status = state.connectionStatus)
                         }
-                        val subtitle = if (state.activeConversationId != null) {
-                            "${state.selectedAgent.displayName} • ${state.selectedModel?.displayName ?: "Mặc định"}"
+                        val subLabel = if (workspaceLabel != null) {
+                            "${state.selectedAgent.displayName} • $workspaceLabel"
                         } else {
-                            state.selectedModel?.displayName ?: state.selectedAgent.displayName
+                            "${state.selectedAgent.displayName} • $currentModelName"
                         }
                         Text(
-                            text = subtitle,
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontSize = 11.sp
-                            ),
-                            color = Color(0xFFA1A1AA),
+                            text = subLabel,
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.5.sp),
+                            color = Color(0xFF9CA3AF),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -129,13 +150,22 @@ fun ChatScreen(
                 navigationIcon = {
                     IconButton(onClick = onOpenDrawer) {
                         Icon(
-                            imageVector = Icons.Default.Menu,
-                            contentDescription = "Menu chính",
+                            imageVector = Icons.Outlined.Menu,
+                            contentDescription = "Mở danh sách dự án",
                             tint = Color(0xFFE4E4E7)
                         )
                     }
                 },
                 actions = {
+                    IconButton(
+                        onClick = { viewModel.processIntent(ChatIntent.NewConversation) }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Add,
+                            contentDescription = "Tạo phiên mới",
+                            tint = Color(0xFFD4785A)
+                        )
+                    }
                     IconButton(onClick = onOpenSettings) {
                         Icon(
                             imageVector = Icons.Outlined.Settings,
@@ -145,80 +175,115 @@ fun ChatScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF141416)
+                    containerColor = Color(0xFF121215)
                 )
             )
         },
         bottomBar = {
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .imePadding()
-                    .navigationBarsPadding()
+                    .navigationBarsPadding(),
+                contentAlignment = Alignment.Center
             ) {
-                // Approval Card if waiting for permission
-                state.pendingApproval?.let { req ->
-                    ApprovalCard(
-                        request = req,
-                        onApprove = { viewModel.processIntent(ChatIntent.ApproveTool(req.callId, true)) },
-                        onReject = { viewModel.processIntent(ChatIntent.ApproveTool(req.callId, false)) },
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                Column(
+                    modifier = Modifier
+                        .widthIn(max = 800.dp)
+                        .fillMaxWidth()
+                ) {
+                    state.pendingApproval?.let { req ->
+                        ApprovalCard(
+                            request = req,
+                            onApprove = { viewModel.processIntent(ChatIntent.ApproveTool(req.callId, true)) },
+                            onReject = { viewModel.processIntent(ChatIntent.ApproveTool(req.callId, false)) },
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+                        )
+                    }
+
+                    ChatInputBar(
+                        inputText = state.inputText,
+                        onInputChanged = { viewModel.processIntent(ChatIntent.InputChanged(it)) },
+                        onSend = { viewModel.processIntent(ChatIntent.SendPrompt) },
+                        onCancel = { viewModel.processIntent(ChatIntent.CancelTask) },
+                        isBusy = state.agentState.isBusy,
+                        canSend = state.canSendPrompt,
+                        selectedAgent = state.selectedAgent,
+                        selectedModel = state.selectedModel,
+                        availableModels = state.availableModels,
+                        onModelSelected = { viewModel.processIntent(ChatIntent.SelectModel(it)) },
+                        selectedPermission = state.selectedPermission,
+                        availablePermissions = state.availablePermissions,
+                        onPermissionSelected = { viewModel.processIntent(ChatIntent.SelectPermission(it)) },
+                        attachedFiles = state.attachedFiles,
+                        isUploadingAttachment = state.isUploadingAttachment,
+                        onRemoveAttachment = { viewModel.processIntent(ChatIntent.RemoveAttachment(it)) },
+                        availableProjects = state.catalogs[state.selectedAgent]?.projects.orEmpty(),
+                        onProjectMentionSelected = { proj ->
+                            viewModel.processIntent(ChatIntent.SelectWorkspace(proj.folders.firstOrNull()))
+                        },
+                        onAttachClick = launchFilePicker,
+                        onVoiceClick = launchVoiceInput
                     )
                 }
-
-                ChatInputBar(
-                    inputText = state.inputText,
-                    onInputChanged = { viewModel.processIntent(ChatIntent.InputChanged(it)) },
-                    onSend = { viewModel.processIntent(ChatIntent.SendPrompt) },
-                    onCancel = { viewModel.processIntent(ChatIntent.CancelTask) },
-                    isBusy = state.agentState.isBusy,
-                    canSend = state.canSendPrompt,
-                    selectedAgent = state.selectedAgent,
-                    selectedModel = state.selectedModel,
-                    availableModels = state.availableModels,
-                    onModelSelected = { viewModel.processIntent(ChatIntent.SelectModel(it)) }
-                )
             }
         }
     ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(paddingValues),
+            contentAlignment = Alignment.TopCenter
         ) {
             if (state.messages.isEmpty()) {
-                val modelName = state.selectedModel?.displayName ?: state.availableModels.firstOrNull()?.displayName ?: "Online"
-                ClaudeEmptyState(
-                    title = state.activeConversationTitle ?: "Sẵn sàng hỗ trợ bạn",
-                    subtitle = if (state.activeConversationId != null) {
-                        "Tiếp tục phiên làm việc • ${state.selectedAgent.displayName}"
-                    } else {
-                        "Chỉ đạo ${state.selectedAgent.displayName} • $modelName"
+                SignatureEmptyHero(
+                    title = state.activeConversationTitle ?: "Sẵn sàng điều phối tác vụ",
+                    subtitle = "${state.selectedAgent.displayName} • $currentModelName",
+                    onSuggestionClick = { suggestion ->
+                        viewModel.processIntent(ChatIntent.InputChanged(suggestion))
                     },
                     modifier = Modifier.fillMaxSize()
                 )
             } else {
                 LazyColumn(
                     state = listState,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    modifier = Modifier
+                        .widthIn(max = 800.dp)
+                        .fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(items = state.messages, key = { it.id }) { message ->
                         ChatMessageBubble(message = message)
                     }
                 }
             }
+
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 8.dp, start = 16.dp, end = 16.dp)
+            )
         }
     }
 }
 
 @Composable
-private fun ClaudeEmptyState(
+private fun SignatureEmptyHero(
     title: String,
     subtitle: String,
+    onSuggestionClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val suggestions = remember {
+        listOf(
+            "Kiểm tra git status & các thay đổi gần đây",
+            "Chạy bộ unit test và báo cáo kết quả",
+            "Phân tích kiến trúc và đề xuất tối ưu"
+        )
+    }
+
     Box(
         modifier = modifier.padding(horizontal = 24.dp),
         contentAlignment = Alignment.Center
@@ -227,37 +292,21 @@ private fun ClaudeEmptyState(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Terracotta 8-spoke Claude spark
-            Canvas(modifier = Modifier.size(56.dp)) {
-                val center = Offset(size.width / 2, size.height / 2)
-                val radius = size.minDimension / 2.2f
-                val innerRadius = radius * 0.42f
-                val strokeWidth = 3.5.dp.toPx()
-                val color = Color(0xFFCC785C)
-
-                for (i in 0 until 8) {
-                    val angle = (i * 45f) * (kotlin.math.PI / 180f).toFloat()
-                    val cos = kotlin.math.cos(angle)
-                    val sin = kotlin.math.sin(angle)
-                    drawLine(
-                        color = color,
-                        start = Offset(center.x + innerRadius * cos, center.y + innerRadius * sin),
-                        end = Offset(center.x + radius * cos, center.y + radius * sin),
-                        strokeWidth = strokeWidth,
-                        cap = StrokeCap.Round
-                    )
-                }
-            }
+            // Tony Stark Mark I / III Classic Circular Arc Reactor Emblem
+            ArcReactorEmblem(
+                modifier = Modifier.size(86.dp),
+                animated = true
+            )
 
             Spacer(modifier = Modifier.height(20.dp))
 
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleLarge.copy(
-                    fontWeight = FontWeight.Medium,
+                    fontWeight = FontWeight.SemiBold,
                     fontSize = 20.sp
                 ),
-                color = Color(0xFFF4F4F5),
+                color = Color(0xFFF5F4F0),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
@@ -267,10 +316,38 @@ private fun ClaudeEmptyState(
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
-                color = Color(0xFF71717A),
+                color = Color(0xFF8E8E98),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                suggestions.forEach { text ->
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = Color(0xFF1A1A20),
+                        border = BorderStroke(1.dp, Color(0xFF2A2A34)),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(14.dp))
+                            .clickable { onSuggestionClick(text) }
+                    ) {
+                        Text(
+                            text = text,
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium
+                            ),
+                            color = Color(0xFFD4D4D8),
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -280,7 +357,7 @@ private fun ConnectionDot(status: ConnectionStatus) {
     val color = when (status) {
         is ConnectionStatus.Connected -> Color(0xFF22C55E)
         ConnectionStatus.Connecting, is ConnectionStatus.Reconnecting -> Color(0xFFF59E0B)
-        ConnectionStatus.Disconnected, is ConnectionStatus.Error -> Color(0xFFDC2626)
+        ConnectionStatus.Disconnected, is ConnectionStatus.Error -> Color(0xFFEF4444)
     }
     Box(
         modifier = Modifier

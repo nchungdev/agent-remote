@@ -13,8 +13,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -22,11 +24,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.FilterList
+import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -53,6 +55,7 @@ import app.duinch.agentremote.core.domain.model.AgentType
 import app.duinch.agentremote.core.domain.model.ConnectionStatus
 import app.duinch.agentremote.core.domain.model.EngineCatalog
 import app.duinch.agentremote.core.domain.model.EngineConversation
+import app.duinch.agentremote.core.presentation.components.ArcReactorEmblem
 
 @Composable
 fun ConversationDrawerContent(
@@ -104,6 +107,8 @@ fun ConversationDrawerContent(
             .fillMaxHeight()
             .fillMaxWidth()
             .background(Color(0xFF141416))
+            .statusBarsPadding()
+            .navigationBarsPadding()
     ) {
         // App header
         Column(
@@ -117,6 +122,11 @@ fun ConversationDrawerContent(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    ArcReactorEmblem(
+                        modifier = Modifier.size(26.dp),
+                        animated = true
+                    )
+                    Spacer(modifier = Modifier.width(9.dp))
                     Text(
                         text = "Agent Remote",
                         style = MaterialTheme.typography.titleMedium.copy(
@@ -142,7 +152,7 @@ fun ConversationDrawerContent(
                         modifier = Modifier.size(32.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Refresh,
+                            imageVector = Icons.Outlined.Refresh,
                             contentDescription = "Làm mới danh sách",
                             tint = Color(0xFFA1A1AA),
                             modifier = Modifier.size(18.dp)
@@ -165,7 +175,7 @@ fun ConversationDrawerContent(
                             modifier = Modifier.size(32.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Close,
+                                imageVector = Icons.Outlined.Close,
                                 contentDescription = "Đóng menu",
                                 tint = Color(0xFFA1A1AA),
                                 modifier = Modifier.size(19.dp)
@@ -199,7 +209,7 @@ fun ConversationDrawerContent(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Add,
+                        imageVector = Icons.Outlined.Add,
                         contentDescription = null,
                         tint = Color(0xFFCC785C),
                         modifier = Modifier.size(18.dp)
@@ -267,7 +277,7 @@ fun ConversationDrawerContent(
                     modifier = Modifier.size(28.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.FilterList,
+                        imageVector = Icons.Outlined.FilterList,
                         contentDescription = "Lọc phiên",
                         tint = if (isSearchActive || searchQuery.isNotBlank()) Color(0xFFCC785C) else Color(0xFF71717A),
                         modifier = Modifier.size(16.dp)
@@ -291,7 +301,7 @@ fun ConversationDrawerContent(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Search,
+                        imageVector = Icons.Outlined.Search,
                         contentDescription = null,
                         tint = Color(0xFF71717A),
                         modifier = Modifier.size(14.dp)
@@ -322,7 +332,7 @@ fun ConversationDrawerContent(
                     )
                     if (searchQuery.isNotEmpty()) {
                         Icon(
-                            imageVector = Icons.Default.Close,
+                            imageVector = Icons.Outlined.Close,
                             contentDescription = "Xóa lọc",
                             tint = Color(0xFFA1A1AA),
                             modifier = Modifier

@@ -72,10 +72,14 @@ func ToolResult(callID, toolName, output string, isError bool) []byte {
 	})
 }
 
-func MessageEnd(messageID string) []byte {
-	return marshalEvent("MESSAGE_END", map[string]any{
-		"messageId": messageID,
-	})
+// MessageEnd closes a prompt's message. conversationID lets the client continue the
+// same conversation with its next prompt.
+func MessageEnd(messageID, conversationID string) []byte {
+	data := map[string]any{"messageId": messageID}
+	if conversationID != "" {
+		data["conversationId"] = conversationID
+	}
+	return marshalEvent("MESSAGE_END", data)
 }
 
 func ErrorEvent(message string) []byte {

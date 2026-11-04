@@ -7,12 +7,12 @@ import (
 )
 
 func (s *Server) HandleDashboard(w http.ResponseWriter, r *http.Request) {
-	roomCode := s.GetRoomCode()
 	tunnelURL := s.GetTunnelURL()
+	serverID := s.identity.ID
 	lanIP := getLocalLANIP()
 	lanURL := fmt.Sprintf("ws://%s:%d", lanIP, s.GetPort())
 
-	html := fmt.Sprintf(dashboardHTMLTemplate, tunnelURL, roomCode, lanURL, time.Now().UnixMilli())
+	html := fmt.Sprintf(dashboardHTMLTemplate, tunnelURL, serverID, lanURL, time.Now().UnixMilli())
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_, _ = w.Write([]byte(html))
@@ -95,10 +95,9 @@ const dashboardHTMLTemplate = `<!DOCTYPE html>
                 </div>
             </div>
             <div class="info-row">
-                <div><div class="label">🔑 P2P Room Code (WebRTC)</div><div class="val" id="roomCodeText" style="font-size: 16px; color: #60A5FA;">%s</div></div>
-                <div style="display: flex; gap: 6px;">
-                    <button class="copy-btn" onclick="copyText('roomCodeText')">Sao chép</button>
-                    <button class="copy-btn" style="color: var(--orange);" onclick="rotateRoom()">Đổi mã</button>
+                <div><div class="label">🖥️ Server Identity (ID)</div><div class="val" id="serverIdText" style="font-size: 14px; color: #60A5FA;">%s</div></div>
+                <div>
+                    <button class="copy-btn" onclick="copyText('serverIdText')">Sao chép</button>
                 </div>
             </div>
             <div class="info-row">
@@ -170,7 +169,7 @@ const dashboardHTMLTemplate = `<!DOCTYPE html>
                 const res = await fetch('/api/status');
                 const data = await res.json();
                 if (data.tunnelUrl) document.getElementById('tunnelUrlText').innerText = data.tunnelUrl;
-                if (data.roomCode) document.getElementById('roomCodeText').innerText = data.roomCode;
+                if (data.serverId) document.getElementById('serverIdText').innerText = data.serverId;
                 const hrs = Math.floor(data.uptimeSec / 3600);
                 const mins = Math.floor((data.uptimeSec %% 3600) / 60);
                 const secs = data.uptimeSec %% 60;

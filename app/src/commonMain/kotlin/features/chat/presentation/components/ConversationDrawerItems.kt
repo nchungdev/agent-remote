@@ -13,10 +13,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
+import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -74,7 +74,7 @@ internal fun ProjectHeaderRow(
 
             if (conversationCount > 0) {
                 Icon(
-                    imageVector = if (isCollapsed) Icons.AutoMirrored.Filled.KeyboardArrowRight else Icons.Default.KeyboardArrowDown,
+                    imageVector = if (isCollapsed) Icons.AutoMirrored.Outlined.KeyboardArrowRight else Icons.Outlined.KeyboardArrowDown,
                     contentDescription = if (isCollapsed) "Mở rộng" else "Thu gọn",
                     tint = Color(0xFF71717A),
                     modifier = Modifier.size(16.dp)
@@ -111,7 +111,7 @@ internal fun ProjectConversationItem(
         ) {
             if (conversation.pinned) {
                 Icon(
-                    imageVector = Icons.Default.PushPin,
+                    imageVector = Icons.Outlined.PushPin,
                     contentDescription = "Đã ghim",
                     tint = Color(0xFFF59E0B),
                     modifier = Modifier.size(12.dp)

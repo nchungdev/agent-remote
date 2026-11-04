@@ -19,12 +19,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.BugReport
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Terminal
+import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.Bolt
+import androidx.compose.material.icons.outlined.BugReport
+import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.Terminal
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -63,7 +63,7 @@ val availableEngines = listOf(
         subtitle = "Tác vụ đa công cụ, tư duy sâu, workspace tương tác và quản lý subagents",
         badge = "Khuyên dùng",
         accentColor = Color(0xFF22C55E),
-        icon = Icons.Default.AutoAwesome
+        icon = Icons.Outlined.AutoAwesome
     ),
     EngineItem(
         type = AgentType.CLAUDE_CODE,
@@ -71,7 +71,7 @@ val availableEngines = listOf(
         subtitle = "Anthropic CLI agent trực tiếp thao tác code và dòng lệnh máy chủ",
         badge = "Anthropic",
         accentColor = Color(0xFFCC785C),
-        icon = Icons.Default.Bolt
+        icon = Icons.Outlined.Bolt
     ),
     EngineItem(
         type = AgentType.CODEX,
@@ -79,7 +79,7 @@ val availableEngines = listOf(
         subtitle = "Lập trình tự động và kiểm thử giải pháp nhanh qua terminal",
         badge = "Console",
         accentColor = Color(0xFF38BDF8),
-        icon = Icons.Default.Terminal
+        icon = Icons.Outlined.Terminal
     ),
     EngineItem(
         type = AgentType.MOCK,
@@ -87,7 +87,7 @@ val availableEngines = listOf(
         subtitle = "Giả lập kiểm thử kết nối Gateway an toàn không tiêu hao tài nguyên",
         badge = "Test",
         accentColor = Color(0xFFA1A1AA),
-        icon = Icons.Default.BugReport
+        icon = Icons.Outlined.BugReport
     )
 )
 
@@ -245,7 +245,7 @@ fun EngineSelectorScreen(
                             Spacer(modifier = Modifier.width(8.dp))
 
                             Icon(
-                                imageVector = Icons.Default.ChevronRight,
+                                imageVector = Icons.Outlined.ChevronRight,
                                 contentDescription = null,
                                 tint = if (isSelected) engine.accentColor else Color(0xFF52525B),
                                 modifier = Modifier.size(20.dp)

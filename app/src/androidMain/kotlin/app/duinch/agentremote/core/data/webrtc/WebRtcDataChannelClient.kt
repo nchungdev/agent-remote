@@ -231,9 +231,11 @@ class WebRtcDataChannelClient(
     override suspend fun sendPrompt(
         prompt: String,
         model: String?,
-        conversationId: String?
+        conversationId: String?,
+        permissionMode: String?,
+        workspace: String?
     ): AppResult<Unit, DomainError> =
-        sendAction(GatewayActionDto.sendPrompt(prompt, model, conversationId))
+        sendAction(GatewayActionDto.sendPrompt(prompt, model, conversationId, permissionMode, workspace))
 
     override suspend fun approveTool(callId: String, approved: Boolean): AppResult<Unit, DomainError> =
         sendAction(GatewayActionDto(action = "APPROVE_TOOL", callId = callId, approved = approved))

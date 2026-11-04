@@ -7,12 +7,10 @@ import app.duinch.agentremote.core.domain.model.ChatMessage
 import app.duinch.agentremote.core.domain.model.ConnectionStatus
 import app.duinch.agentremote.core.domain.model.DomainGatewayEvent
 import app.duinch.agentremote.core.domain.model.MessageRole
-import app.duinch.agentremote.core.domain.model.ToolCall
-import app.duinch.agentremote.core.domain.model.ToolStatus
 import app.duinch.agentremote.core.domain.repository.AgentGatewayClient
 import app.duinch.agentremote.core.domain.result.AppResult
-import app.duinch.agentremote.core.domain.result.DomainError
 import app.duinch.agentremote.core.presentation.util.PlatformAlertNotifier
+import app.duinch.agentremote.features.chat.presentation.contract.AttachedFileItem
 import app.duinch.agentremote.features.chat.presentation.contract.ChatEffect
 import app.duinch.agentremote.features.chat.presentation.contract.ChatIntent
 import app.duinch.agentremote.features.chat.presentation.contract.ChatUiState
@@ -35,11 +33,17 @@ class ChatViewModel(
 ) {
 
     private val initialPrefs = storage.load()
+    private val initialModels = initialPrefs.defaultAgent.defaultModels()
+    private val initialPermissions = initialPrefs.defaultAgent.permissionModes()
 
     private val _uiState = MutableStateFlow(
         ChatUiState(
             gatewayUrl = initialPrefs.lastGatewayUrl,
-            selectedAgent = initialPrefs.defaultAgent
+            selectedAgent = initialPrefs.defaultAgent,
+            availableModels = initialModels,
+            selectedModel = initialModels.firstOrNull(),
+            availablePermissions = initialPermissions,
+            selectedPermission = initialPrefs.defaultAgent.defaultPermissionMode()
         )
     )
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
@@ -85,7 +89,7 @@ class ChatViewModel(
                 }
 
                 if (status is ConnectionStatus.Connected) {
-                    _uiState.update { it.copy(selectedAgent = status.agentType) }
+                    _uiState.update { ChatStateReducer.syncAgentPermissions(it, status.agentType) }
                     gatewayClient.requestCatalog()
                 } else if (status is ConnectionStatus.Error) {
                     _effects.tryEmit(ChatEffect.ShowSnackbar("Lỗi kết nối: ${status.message}"))
@@ -105,31 +109,12 @@ class ChatViewModel(
     private fun handleGatewayEvent(event: DomainGatewayEvent) {
         when (event) {
             is DomainGatewayEvent.SessionInit -> {
-                _uiState.update { it.copy(selectedAgent = event.agentType) }
+                _uiState.update { ChatStateReducer.syncAgentPermissions(it, event.agentType) }
                 scope.launch { gatewayClient.requestCatalog() }
             }
 
             is DomainGatewayEvent.CatalogLoaded -> {
-                val cat = event.catalog
-                val updatedCatalogs = _uiState.value.catalogs + (cat.agentType to cat)
-                _uiState.update { current ->
-                    val newAvailableModels = if (cat.agentType == current.selectedAgent) {
-                        cat.models
-                    } else {
-                        current.availableModels
-                    }
-                    val newSelectedModel = if (cat.agentType == current.selectedAgent) {
-                        current.selectedModel?.takeIf { sm -> cat.models.any { it.id == sm.id } }
-                            ?: cat.models.firstOrNull()
-                    } else {
-                        current.selectedModel
-                    }
-                    current.copy(
-                        catalogs = updatedCatalogs,
-                        availableModels = newAvailableModels,
-                        selectedModel = newSelectedModel
-                    )
-                }
+                _uiState.update { ChatStateReducer.applyCatalogLoaded(it, event.catalog) }
             }
 
             is DomainGatewayEvent.AgentStateChanged -> {
@@ -137,15 +122,18 @@ class ChatViewModel(
             }
 
             is DomainGatewayEvent.ThinkingChunk -> {
-                appendThinkingChunk(event.thought)
+                val currentId = currentAssistantMsgId ?: createAssistantMessage()
+                _uiState.update { ChatStateReducer.appendThinking(it, currentId, event.thought) }
             }
 
             is DomainGatewayEvent.TextChunk -> {
-                appendTextChunk(event.text)
+                val currentId = currentAssistantMsgId ?: createAssistantMessage()
+                _uiState.update { ChatStateReducer.appendText(it, currentId, event.text) }
             }
 
             is DomainGatewayEvent.ToolCallStarted -> {
-                addToolCall(event.callId, event.toolName, event.argsJson)
+                val currentId = currentAssistantMsgId ?: createAssistantMessage()
+                _uiState.update { ChatStateReducer.addToolCall(it, currentId, event.callId, event.toolName, event.argsJson) }
             }
 
             is DomainGatewayEvent.ApprovalRequired -> {
@@ -160,11 +148,17 @@ class ChatViewModel(
             }
 
             is DomainGatewayEvent.ToolResultReceived -> {
-                updateToolResult(event.callId, event.output, event.isError)
+                val currentId = currentAssistantMsgId ?: return
+                _uiState.update { ChatStateReducer.updateToolResult(it, currentId, event.callId, event.output, event.isError) }
             }
 
             is DomainGatewayEvent.MessageCompleted -> {
-                finishAssistantMessage()
+                val finishedId = currentAssistantMsgId
+                currentAssistantMsgId = null
+                _uiState.update { state ->
+                    val next = ChatStateReducer.finishStreaming(state, finishedId)
+                    next.copy(activeConversationId = next.activeConversationId ?: event.conversationId)
+                }
             }
 
             is DomainGatewayEvent.ErrorOccurred -> {
@@ -188,13 +182,14 @@ class ChatViewModel(
             ChatIntent.Disconnect -> disconnect()
             is ChatIntent.SelectAgent -> selectAgent(intent.agentType)
             is ChatIntent.SelectModel -> selectModel(intent.model)
+            is ChatIntent.SelectPermission -> _uiState.update { it.copy(selectedPermission = intent.mode) }
             is ChatIntent.SelectConversation -> {
                 val targetAgent = intent.agentType ?: _uiState.value.selectedAgent
-                _uiState.update {
-                    it.copy(
+                _uiState.update { current ->
+                    ChatStateReducer.syncAgentPermissions(current, targetAgent).copy(
                         activeConversationId = intent.conversationId,
                         activeConversationTitle = intent.title ?: intent.conversationId.take(8),
-                        selectedAgent = targetAgent,
+                        activeWorkspace = intent.workspace ?: current.activeWorkspace,
                         messages = emptyList()
                     )
                 }
@@ -211,10 +206,32 @@ class ChatViewModel(
                     )
                 }
             }
+            is ChatIntent.SelectWorkspace -> {
+                _uiState.update { it.copy(activeWorkspace = intent.workspace) }
+            }
             ChatIntent.RefreshCatalog -> {
                 scope.launch { gatewayClient.requestCatalog() }
             }
             is ChatIntent.InputChanged -> _uiState.update { it.copy(inputText = intent.newText) }
+            is ChatIntent.AppendVoiceText -> {
+                val spoken = intent.spokenText.trim()
+                if (spoken.isNotEmpty()) {
+                    _uiState.update { current ->
+                        val next = if (current.inputText.isBlank()) {
+                            spoken
+                        } else {
+                            "${current.inputText.trimEnd()} $spoken"
+                        }
+                        current.copy(inputText = next)
+                    }
+                }
+            }
+            is ChatIntent.AttachFile -> attachFile(intent.fileName, intent.bytes)
+            is ChatIntent.RemoveAttachment -> {
+                _uiState.update { current ->
+                    current.copy(attachedFiles = current.attachedFiles.filterNot { it.remotePath == intent.remotePath })
+                }
+            }
             ChatIntent.SendPrompt -> sendPrompt()
             is ChatIntent.ApproveTool -> approveTool(intent.callId, intent.approved)
             ChatIntent.CancelTask -> cancelTask()
@@ -245,12 +262,13 @@ class ChatViewModel(
 
     private fun selectAgent(type: AgentType) {
         scope.launch {
-            val models = _uiState.value.catalogs[type]?.models.orEmpty()
+            val catalogModels = _uiState.value.catalogs[type]?.models.orEmpty()
+            val models = if (catalogModels.isNotEmpty()) catalogModels else type.defaultModels()
             _uiState.update {
-                it.copy(
-                    selectedAgent = type,
+                ChatStateReducer.syncAgentPermissions(it, type).copy(
                     availableModels = models,
-                    selectedModel = models.firstOrNull()
+                    selectedModel = models.firstOrNull(),
+                    selectedPermission = type.defaultPermissionMode()
                 )
             }
             gatewayClient.selectAgent(type)
@@ -265,9 +283,52 @@ class ChatViewModel(
         }
     }
 
+    private fun attachFile(fileName: String, bytes: ByteArray) {
+        _uiState.update { it.copy(isUploadingAttachment = true) }
+        scope.launch {
+            when (val res = gatewayClient.uploadFile(fileName, bytes)) {
+                is AppResult.Success -> {
+                    val item = AttachedFileItem(fileName = fileName, remotePath = res.data)
+                    _uiState.update {
+                        it.copy(
+                            attachedFiles = it.attachedFiles + item,
+                            isUploadingAttachment = false
+                        )
+                    }
+                }
+                is AppResult.Failure -> {
+                    _uiState.update { it.copy(isUploadingAttachment = false) }
+                    _effects.tryEmit(ChatEffect.ShowSnackbar("Không thể tải tệp lên máy chủ"))
+                }
+            }
+        }
+    }
+
     private fun sendPrompt() {
-        val text = _uiState.value.inputText.trim()
-        if (text.isEmpty()) return
+        val rawText = _uiState.value.inputText.trim()
+        val attachments = _uiState.value.attachedFiles
+        if (rawText.isEmpty() && attachments.isEmpty()) return
+
+        if (rawText.equals("/clear", ignoreCase = true) || rawText.equals("/new", ignoreCase = true)) {
+            _uiState.update {
+                it.copy(
+                    activeConversationId = null,
+                    activeConversationTitle = null,
+                    messages = emptyList(),
+                    inputText = "",
+                    attachedFiles = emptyList()
+                )
+            }
+            return
+        }
+
+        val attachmentSuffix = if (attachments.isNotEmpty()) {
+            val paths = attachments.joinToString(", ") { "${it.fileName} (${it.remotePath})" }
+            if (rawText.isEmpty()) "Phân tích tệp đính kèm: $paths" else "\n\n[Tệp đính kèm: $paths]"
+        } else {
+            ""
+        }
+        val text = rawText + attachmentSuffix
 
         val userMsg = ChatMessage(
             id = "user_${timestamp()}",
@@ -290,6 +351,7 @@ class ChatViewModel(
             it.copy(
                 messages = it.messages + userMsg + assistantMsg,
                 inputText = "",
+                attachedFiles = emptyList(),
                 agentState = AgentState.THINKING
             )
         }
@@ -297,15 +359,11 @@ class ChatViewModel(
         scope.launch {
             val modelId = _uiState.value.selectedModel?.id
             val convId = _uiState.value.activeConversationId
-            val res = gatewayClient.sendPrompt(text, modelId, convId)
+            val permId = _uiState.value.selectedPermission?.id
+            val workspace = _uiState.value.activeWorkspace
+            val res = gatewayClient.sendPrompt(text, modelId, convId, permId, workspace)
             if (res is AppResult.Failure) {
-                val errMsg = when (val err = res.error) {
-                    is DomainError.Network -> err.message
-                    is DomainError.Protocol -> err.message
-                    is DomainError.Unauthorized -> err.message
-                    is DomainError.AgentUnavailable -> "Agent ${err.agentName} không khả dụng"
-                    is DomainError.Unknown -> err.message
-                }
+                val errMsg = ChatStateReducer.formatDomainError(res.error)
                 _uiState.update { state ->
                     val updated = state.messages.map { msg ->
                         if (msg.id == assistantId) {
@@ -332,70 +390,6 @@ class ChatViewModel(
         scope.launch {
             gatewayClient.cancelTask()
             _uiState.update { it.copy(agentState = AgentState.IDLE) }
-        }
-    }
-
-    private fun appendThinkingChunk(thought: String) {
-        val currentId = currentAssistantMsgId ?: createAssistantMessage()
-        _uiState.update { state ->
-            val updated = state.messages.map { msg ->
-                if (msg.id == currentId) {
-                    msg.copy(thinking = (msg.thinking ?: "") + thought)
-                } else msg
-            }
-            state.copy(messages = updated)
-        }
-    }
-
-    private fun appendTextChunk(text: String) {
-        val currentId = currentAssistantMsgId ?: createAssistantMessage()
-        _uiState.update { state ->
-            val updated = state.messages.map { msg ->
-                if (msg.id == currentId) {
-                    msg.copy(content = msg.content + text)
-                } else msg
-            }
-            state.copy(messages = updated)
-        }
-    }
-
-    private fun addToolCall(callId: String, name: String, args: String) {
-        val currentId = currentAssistantMsgId ?: createAssistantMessage()
-        val toolCall = ToolCall(id = callId, toolName = name, argsJson = args, status = ToolStatus.RUNNING)
-        _uiState.update { state ->
-            val updated = state.messages.map { msg ->
-                if (msg.id == currentId) {
-                    msg.copy(toolCalls = msg.toolCalls + toolCall)
-                } else msg
-            }
-            state.copy(messages = updated)
-        }
-    }
-
-    private fun updateToolResult(callId: String, output: String, isError: Boolean) {
-        val currentId = currentAssistantMsgId ?: return
-        val newStatus = if (isError) ToolStatus.FAILED else ToolStatus.SUCCESS
-        _uiState.update { state ->
-            val updated = state.messages.map { msg ->
-                if (msg.id == currentId) {
-                    val updatedTools = msg.toolCalls.map { tc ->
-                        if (tc.id == callId) tc.copy(result = output, status = newStatus) else tc
-                    }
-                    msg.copy(toolCalls = updatedTools)
-                } else msg
-            }
-            state.copy(messages = updated)
-        }
-    }
-
-    private fun finishAssistantMessage() {
-        val currentId = currentAssistantMsgId
-        currentAssistantMsgId = null
-        _uiState.update { state ->
-            val updated = state.messages.map { msg ->
-                if (msg.id == currentId) msg.copy(isStreaming = false) else msg
-            }
-            state.copy(messages = updated, agentState = AgentState.IDLE)
         }
     }
 

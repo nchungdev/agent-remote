@@ -66,36 +66,18 @@ type Server struct {
 	httpServer       *http.Server
 	running          bool
 	startTime        time.Time
+	identity         ServerIdentity
 	serverMu         sync.Mutex
-}
-
-func loadOrGenerateRoomCode() string {
-	home, err := os.UserHomeDir()
-	if err == nil {
-		dir := filepath.Join(home, ".agent-remote")
-		_ = os.MkdirAll(dir, 0755)
-		file := filepath.Join(dir, "room_code")
-		if data, err := os.ReadFile(file); err == nil {
-			code := strings.TrimSpace(string(data))
-			if len(code) >= 6 {
-				return code
-			}
-		}
-		b := make([]byte, 3)
-		_, _ = rand.Read(b)
-		num := (int(b[0])<<16|int(b[1])<<8|int(b[2]))%900000 + 100000
-		code := fmt.Sprintf("%03d-%03d", num/1000, num%1000)
-		_ = os.WriteFile(file, []byte(code), 0600)
-		return code
-	}
-	return "849-210"
 }
 
 func NewServer(host string, port int, token string) *Server {
 	sessionBytes := make([]byte, 4)
 	_, _ = rand.Read(sessionBytes)
 	sessionID := hex.EncodeToString(sessionBytes)
-	roomCode := loadOrGenerateRoomCode()
+
+	home, _ := os.UserHomeDir()
+	dataDir := filepath.Join(home, ".agent-remote")
+	identity, _ := LoadServerIdentity(dataDir)
 
 	adapters := map[protocol.AgentType]adapter.Adapter{
 		protocol.AgentTypeMock:        adapter.NewMockAdapter(),
@@ -109,7 +91,8 @@ func NewServer(host string, port int, token string) *Server {
 		port:             port,
 		token:            token,
 		sessionID:        sessionID,
-		roomCode:         roomCode,
+		roomCode:         webrtc.FixedSignalingRoom,
+		identity:         identity,
 		currentAgentType: protocol.AgentTypeMock,
 		adapters:         adapters,
 		catalog:          catalog.NewDefaultService(),
@@ -125,15 +108,17 @@ func NewServer(host string, port int, token string) *Server {
 		srv.serverMu.Unlock()
 	}))
 
-	srv.webrtcHub = webrtc.NewHub(roomCode, sessionID, adapters, srv.catalog, srv.sigHub)
+	srv.webrtcHub = webrtc.NewHub(webrtc.FixedSignalingRoom, sessionID, adapters, srv.catalog, srv.sigHub)
 
 	return srv
 }
 
 func (s *Server) GetRoomCode() string {
-	s.serverMu.Lock()
-	defer s.serverMu.Unlock()
-	return s.roomCode
+	return webrtc.FixedSignalingRoom
+}
+
+func (s *Server) GetIdentity() ServerIdentity {
+	return s.identity
 }
 
 func (s *Server) GetPort() int {
@@ -282,6 +267,7 @@ func (s *Server) HandleWS(w http.ResponseWriter, r *http.Request) {
 				Prompt:         prompt,
 				Model:          msg.Model,
 				ConversationID: msg.ConversationID,
+				PermissionMode: msg.PermissionMode,
 				Workspace:      msg.Workspace,
 			}
 			go currentAd.HandlePrompt(opts, emit)
@@ -341,6 +327,10 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/api/remote/pending-requests", s.HandleRemotePendingRequests)
 	mux.HandleFunc("/api/remote/approve-request", s.HandleRemoteApproveRequest)
 	mux.HandleFunc("/api/remote/request-status", s.HandleRemoteRequestStatus)
+
+	sigHandler := NewSignalHTTPHandler(s.sigHub, s.token)
+	mux.Handle("/api/webrtc/signal", sigHandler)
+	mux.Handle("/api/signal", sigHandler)
 
 	s.httpServer = &http.Server{
 		Addr:    addr,

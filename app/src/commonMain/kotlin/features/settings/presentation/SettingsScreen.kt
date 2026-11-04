@@ -14,11 +14,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Hub
-import androidx.compose.material.icons.filled.NotificationsActive
-import androidx.compose.material.icons.filled.Sync
-import androidx.compose.material.icons.filled.VerifiedUser
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Hub
+import androidx.compose.material.icons.outlined.NotificationsActive
+import androidx.compose.material.icons.outlined.Sync
+import androidx.compose.material.icons.outlined.VerifiedUser
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -91,7 +91,7 @@ fun SettingsScreen(
                     if (onBack != null) {
                         IconButton(onClick = onBack) {
                             Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                                 contentDescription = "Quay lại",
                                 tint = Color(0xFFE4E4E7)
                             )
@@ -121,7 +121,7 @@ fun SettingsScreen(
                 ) {
                     Column {
                         SettingsNavigationRow(
-                            icon = Icons.Default.Hub,
+                            icon = Icons.Outlined.Hub,
                             title = "Quản lý máy chủ kết nối",
                             subtitle = activeHostLabel,
                             statusDotColor = statusDotColor,
@@ -133,7 +133,7 @@ fun SettingsScreen(
                         HorizontalDivider(color = Color(0xFF2E2E34), thickness = 0.5.dp)
 
                         SettingsSwitchRow(
-                            icon = Icons.Default.Sync,
+                            icon = Icons.Outlined.Sync,
                             title = "Tự động kết nối lại",
                             subtitle = "Khôi phục phiên làm việc ngay khi mạng Wi-Fi hoặc P2P ổn định trở lại",
                             checked = state.autoReconnect,
@@ -197,7 +197,7 @@ fun SettingsScreen(
                 ) {
                     Column {
                         SettingsSwitchRow(
-                            icon = Icons.Default.VerifiedUser,
+                            icon = Icons.Outlined.VerifiedUser,
                             title = "Cảnh báo duyệt quyền thực thi",
                             subtitle = "Hiển thị thông báo tức thì khi Agent chờ phê duyệt chạy lệnh hoặc sửa tệp",
                             checked = state.notifyAgentApproval,
@@ -209,7 +209,7 @@ fun SettingsScreen(
                         HorizontalDivider(color = Color(0xFF2E2E34), thickness = 0.5.dp)
 
                         SettingsSwitchRow(
-                            icon = Icons.Default.NotificationsActive,
+                            icon = Icons.Outlined.NotificationsActive,
                             title = "Thông báo trạng thái kết nối",
                             subtitle = "Báo khi máy chủ kết nối thành công hoặc bị ngắt đường truyền đột ngột",
                             checked = state.notifyConnectionChange,

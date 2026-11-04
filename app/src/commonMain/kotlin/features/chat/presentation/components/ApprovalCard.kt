@@ -1,23 +1,30 @@
 package app.duinch.agentremote.features.chat.presentation.components
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Terminal
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -33,52 +40,121 @@ fun ApprovalCard(
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        color = Color(0xFF1C1917),
-        border = BorderStroke(1.dp, Color(0xFFD97706)),
-        tonalElevation = 2.dp
+        shape = RoundedCornerShape(16.dp),
+        color = Color(0xFF1A1A20),
+        border = BorderStroke(1.dp, Color(0xFF323038))
     ) {
-        Column(modifier = Modifier.padding(10.dp)) {
-            Text(
-                text = "Yêu cầu phê duyệt lệnh",
-                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                color = Color(0xFFFBBF24),
-                maxLines = 1,
-                softWrap = false
-            )
-
-            Text(
-                text = request.summary,
-                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
-                color = Color(0xFFFDE68A),
-                modifier = Modifier.padding(vertical = 4.dp),
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            // Header row: Terminal icon + title + tool badge
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                OutlinedButton(
-                    onClick = onReject,
-                    modifier = Modifier.weight(1f).height(32.dp),
-                    shape = RoundedCornerShape(6.dp),
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFEF4444)),
-                    border = BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.5f))
+                Icon(
+                    imageVector = Icons.Outlined.Terminal,
+                    contentDescription = null,
+                    tint = Color(0xFFD4785A),
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Yêu cầu chạy công cụ",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 13.5.sp
+                    ),
+                    color = Color(0xFFE4E4E7),
+                    modifier = Modifier.weight(1f)
+                )
+                Surface(
+                    shape = RoundedCornerShape(5.dp),
+                    color = Color(0xFF26262F)
                 ) {
-                    Text("Từ chối", maxLines = 1, style = MaterialTheme.typography.labelSmall, softWrap = false)
+                    Text(
+                        text = request.toolName.ifBlank { "bash" }.lowercase(),
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium
+                        ),
+                        color = Color(0xFFA1A1AA),
+                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
+                    )
+                }
+            }
+
+            // Terminal command preview box
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp),
+                color = Color(0xFF111115),
+                border = BorderStroke(0.5.dp, Color(0xFF25252E))
+            ) {
+                Text(
+                    text = request.summary,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 12.5.sp,
+                        lineHeight = 18.sp
+                    ),
+                    color = Color(0xFFE4E4E7),
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp)
+                )
+            }
+
+            // Action buttons pair
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                // Reject button: muted dark grey
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = Color(0xFF26262F),
+                    border = BorderStroke(1.dp, Color(0xFF343440)),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(38.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .clickable { onReject() }
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text = "Từ chối",
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 13.sp
+                            ),
+                            color = Color(0xFFA1A1AA)
+                        )
+                    }
                 }
 
-                Button(
-                    onClick = onApprove,
-                    modifier = Modifier.weight(1f).height(32.dp),
-                    shape = RoundedCornerShape(6.dp),
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF16A34A))
+                // Approve button: signature warm copper
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = Color(0xFFD4785A),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(38.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .clickable { onApprove() }
                 ) {
-                    Text("Đồng ý", maxLines = 1, style = MaterialTheme.typography.labelSmall, color = Color.White, softWrap = false)
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text = "Cho phép",
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 13.sp
+                            ),
+                            color = Color.White
+                        )
+                    }
                 }
             }
         }
