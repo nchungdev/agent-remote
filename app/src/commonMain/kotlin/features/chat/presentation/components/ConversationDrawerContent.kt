@@ -387,7 +387,7 @@ fun ConversationDrawerContent(
                     if (!isCollapsed) {
                         items(
                             items = group.conversations,
-                            key = { conv -> "conv_${conv.id}" }
+                            key = { conv -> "conv_${group.id}_${conv.id}" }
                         ) { conv ->
                             val isSelected = conv.id == activeConversationId
                             ProjectConversationItem(
